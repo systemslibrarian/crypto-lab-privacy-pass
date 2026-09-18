@@ -1,6 +1,6 @@
 import { sha256 } from '@noble/hashes/sha2.js'
 import { concatBytes, utf8ToBytes } from '@noble/hashes/utils.js'
-import { blind, directEvaluate, equal, evaluate, finalize, hashToGroup, keyId, pointBytes, type Point, proveDleq, publicKey, randomNonce, scalarBytes, TOKEN_TYPE, truncatedKeyId, verifyDleq, type Proof } from '../oprf/voprf.js'
+import { blind, directEvaluate, equal, evaluate, finalize, hashToGroup, keyId, pointBytes, pointFromBytes, type Point, proveDleq, publicKey, randomNonce, scalarBytes, scalarFromBytes, TOKEN_TYPE, truncatedKeyId, verifyDleq, type Proof } from '../oprf/voprf.js'
 
 export type Challenge = { issuerName: string; originInfo: string; redemptionContext: Uint8Array }
 export type Token = { nonce: Uint8Array; challengeDigest: Uint8Array; tokenKeyId: Uint8Array; authenticator: Uint8Array }
@@ -25,14 +25,38 @@ export const serializeChallenge = (challenge: Challenge): Uint8Array => {
 }
 export const challengeDigest = (challenge: Challenge): Uint8Array =>
   sha256(serializeChallenge(challenge))
+export const tokenInputFromChallenge = (nonce: Uint8Array, serializedChallenge: Uint8Array, issuerPublicKey: Point): Uint8Array => {
+  if (nonce.length !== 32) throw new Error('Token nonce must be 32 bytes')
+  return concatBytes(TOKEN_TYPE, nonce, sha256(serializedChallenge), keyId(issuerPublicKey))
+}
 export const tokenInput = (nonce: Uint8Array, challenge: Challenge, issuerPublicKey: Point): Uint8Array =>
-  concatBytes(TOKEN_TYPE, nonce, challengeDigest(challenge), keyId(issuerPublicKey))
+  tokenInputFromChallenge(nonce, serializeChallenge(challenge), issuerPublicKey)
 export const serializeRequest = (request: Request): Uint8Array =>
   concatBytes(TOKEN_TYPE, new Uint8Array([request.truncatedTokenKeyId]), pointBytes(request.blinded))
 export const serializeResponse = (response: Response): Uint8Array =>
   concatBytes(pointBytes(response.evaluated), scalarBytes(response.proof.c), scalarBytes(response.proof.s))
 export const serializeToken = (token: Token): Uint8Array =>
   concatBytes(TOKEN_TYPE, token.nonce, token.challengeDigest, token.tokenKeyId, token.authenticator)
+export const deserializeResponse = (encoded: Uint8Array): Response => {
+  if (encoded.length !== 145) throw new Error('TokenResponse must be exactly 145 bytes')
+  return {
+    evaluated: pointFromBytes(encoded.slice(0, 49)),
+    proof: {
+      c: scalarFromBytes(encoded.slice(49, 97)),
+      s: scalarFromBytes(encoded.slice(97, 145)),
+    },
+  }
+}
+export const deserializeToken = (encoded: Uint8Array): Token => {
+  if (encoded.length !== 146) throw new Error('Token must be exactly 146 bytes')
+  if (!equal(encoded.slice(0, 2), TOKEN_TYPE)) throw new Error('Unsupported token type')
+  return {
+    nonce: encoded.slice(2, 34),
+    challengeDigest: encoded.slice(34, 66),
+    tokenKeyId: encoded.slice(66, 98),
+    authenticator: encoded.slice(98, 146),
+  }
+}
 export const issuerCanLink = (issuance: Issuance): boolean =>
   hashToGroup(issuance.input).equals(issuance.request.blinded)
 

@@ -49,7 +49,7 @@ npx playwright install --with-deps chromium
 npm run test:a11y
 ```
 
-The unit suite has 8 tests: RFC 9497 Appendix A.4.2.1 VOPRF and RFC 9578 Appendix A.1 token-request vectors, complete wire serialization, value-derived linkability, successful private verification, proof tampering rejection, wrong-published-key rejection, and replay rejection. The Playwright gate checks WCAG 2.1 A/AA, arithmetic palette contrast, responsive overflow, complete rendered wire lengths, both privacy failures, replay, verdict retirement, and `[hidden]` behavior. The implementation follows [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497), [RFC 9578](https://www.rfc-editor.org/rfc/rfc9578), and [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380).
+The unit suite has 16 tests, including all 3 RFC 9497 Appendix A.4.2 P-384 VOPRF vectors and all 5 RFC 9578 Appendix A.1 type-`0x0001` issuance vectors. It also covers complete wire parsing and serialization, batch proofs, value-derived linkability, proof failures, and replay rejection. The 10-test Playwright gate checks WCAG 2.1 A/AA, arithmetic palette contrast, responsive overflow, complete rendered wire lengths, both privacy failures, visual link counts, replay, verdict retirement, and `[hidden]` behavior. The implementation follows [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497), [RFC 9578](https://www.rfc-editor.org/rfc/rfc9578), and [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380).
 
 ## Performance
 

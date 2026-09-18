@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { p384 } from '@noble/curves/nist.js'
 import { hexToBytes } from '@noble/hashes/utils.js'
 import { blind, evaluate, finalize, pointBytes, proveDleq, publicKey, verifyDleq } from '../oprf/voprf.js'
-import { Client, Issuer, Origin, issuerCanLink, serializeChallenge, serializeRequest, serializeResponse, serializeToken, tokenInput } from './privacy-pass.js'
+import { Client, deserializeResponse, deserializeToken, Issuer, Origin, issuerCanLink, serializeChallenge, serializeRequest, serializeResponse, serializeToken, tokenInput } from './privacy-pass.js'
 
 const challenge = { issuerName: 'issuer.example', originInfo: 'origin.example', redemptionContext: new Uint8Array() }
 const issuer = () => new Issuer(0x123456789abcdef123456789abcdef123456789abcdef123456789abcdefn)
@@ -46,6 +46,10 @@ describe('RFC 9578 type 0x0001 teaching implementation', () => {
     expect(serializeResponse(issuance.response)).toHaveLength(145)
     expect(serializeToken(issuance.token)).toHaveLength(146)
     expect(serializeToken(issuance.token).slice(0, 2)).toEqual(new Uint8Array([0, 1]))
+    expect(serializeResponse(deserializeResponse(serializeResponse(issuance.response)))).toEqual(serializeResponse(issuance.response))
+    expect(serializeToken(deserializeToken(serializeToken(issuance.token)))).toEqual(serializeToken(issuance.token))
+    expect(() => deserializeResponse(new Uint8Array(144))).toThrow('exactly 145 bytes')
+    expect(() => deserializeToken(new Uint8Array(145))).toThrow('exactly 146 bytes')
   })
 
   it('derives ledger linkability from the request point instead of mode state', () => {

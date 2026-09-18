@@ -13,3 +13,50 @@
 .negative-claim[hidden] {
   display: none;
 }
+
+.link-map {
+  min-height: 6rem;
+  margin: -0.5rem 0 1.5rem;
+  border: 1px dashed var(--border);
+  padding: 0.75rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.link-map p {
+  margin: 1.3rem 0;
+}
+
+.link-map svg {
+  display: block;
+  width: 100%;
+  height: 6rem;
+}
+
+.computed-link line {
+  stroke: var(--alarm);
+  stroke-width: 3;
+  stroke-dasharray: 170;
+  animation: draw-link 450ms ease-out both;
+}
+
+.computed-link circle {
+  fill: var(--alarm);
+}
+
+.computed-link text {
+  fill: var(--text);
+  font: 700 8px Arial, sans-serif;
+}
+
+@keyframes draw-link {
+  from { stroke-dashoffset: 170; }
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .computed-link line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
