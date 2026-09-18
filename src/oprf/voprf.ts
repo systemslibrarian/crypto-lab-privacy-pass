@@ -54,19 +54,31 @@ export const blind = (input: Uint8Array, blindScalar = scalar()): BlindResult =>
 export const evaluate = (secretKey: bigint, blinded: Point): Point => blinded.multiply(secretKey)
 
 const frame = (value: Uint8Array): Uint8Array => concatBytes(i2osp(value.length), value)
-const composite = (issuerPublicKey: Point, blinded: Point, evaluated: Point): { m: Point; z: Point } => {
+const multiplyPublic = (point: Point, value: bigint): Point => value === 0n ? p384.Point.ZERO : point.multiplyUnsafe(value)
+const composites = (issuerPublicKey: Point, blinded: Point[], evaluated: Point[]): { m: Point; z: Point } => {
+  if (blinded.length === 0 || blinded.length !== evaluated.length) throw new Error('DLEQ proof requires equal non-empty element lists')
   const pk = pointBytes(issuerPublicKey)
   const seedDst = bytes(`Seed-${CONTEXT}`)
   const seed = sha384(concatBytes(frame(pk), frame(seedDst)))
-  const coefficient = hashScalar(concatBytes(frame(seed), i2osp(0), frame(pointBytes(blinded)), frame(pointBytes(evaluated)), bytes('Composite')))
-  return { m: blinded.multiply(coefficient), z: evaluated.multiply(coefficient) }
+  let m = p384.Point.ZERO
+  let z = p384.Point.ZERO
+  for (let index = 0; index < blinded.length; index += 1) {
+    const coefficient = hashScalar(concatBytes(frame(seed), i2osp(index), frame(pointBytes(blinded[index])), frame(pointBytes(evaluated[index])), bytes('Composite')))
+    m = m.add(multiplyPublic(blinded[index], coefficient))
+    z = z.add(multiplyPublic(evaluated[index], coefficient))
+  }
+  return { m, z }
 }
 const challenge = (issuerPublicKey: Point, m: Point, z: Point, t2: Point, t3: Point): bigint =>
   hashScalar(concatBytes(frame(pointBytes(issuerPublicKey)), frame(pointBytes(m)), frame(pointBytes(z)), frame(pointBytes(t2)), frame(pointBytes(t3)), bytes('Challenge')))
 
 export const proveDleq = (secretKey: bigint, blinded: Point, evaluated: Point, nonce = scalar()): Proof => {
+  return proveDleqBatch(secretKey, [blinded], [evaluated], nonce)
+}
+
+export const proveDleqBatch = (secretKey: bigint, blinded: Point[], evaluated: Point[], nonce = scalar()): Proof => {
   const pk = publicKey(secretKey)
-  const { m } = composite(pk, blinded, evaluated)
+  const { m } = composites(pk, blinded, evaluated)
   const a = publicKey(nonce)
   const b = m.multiply(nonce)
   const c = challenge(pk, m, m.multiply(secretKey), a, b)
@@ -74,10 +86,14 @@ export const proveDleq = (secretKey: bigint, blinded: Point, evaluated: Point, n
 }
 
 export const verifyDleq = (issuerPublicKey: Point, blinded: Point, evaluated: Point, proof: Proof): boolean => {
-  if (proof.c === 0n || proof.s === 0n) return false
-  const { m, z } = composite(issuerPublicKey, blinded, evaluated)
-  const a = publicKey(proof.s).add(issuerPublicKey.multiply(proof.c))
-  const b = m.multiply(proof.s).add(z.multiply(proof.c))
+  return verifyDleqBatch(issuerPublicKey, [blinded], [evaluated], proof)
+}
+
+export const verifyDleqBatch = (issuerPublicKey: Point, blinded: Point[], evaluated: Point[], proof: Proof): boolean => {
+  if (proof.c < 0n || proof.c >= order || proof.s < 0n || proof.s >= order) return false
+  const { m, z } = composites(issuerPublicKey, blinded, evaluated)
+  const a = multiplyPublic(p384.Point.BASE, proof.s).add(multiplyPublic(issuerPublicKey, proof.c))
+  const b = multiplyPublic(m, proof.s).add(multiplyPublic(z, proof.c))
   return challenge(issuerPublicKey, m, z, a, b) === proof.c
 }
 
