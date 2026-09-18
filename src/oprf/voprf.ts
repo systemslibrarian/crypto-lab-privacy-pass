@@ -1,7 +1,7 @@
 import { p384, p384_hasher } from '@noble/curves/nist.js'
 import { sha256 } from '@noble/hashes/sha2.js'
 import { sha384 } from '@noble/hashes/sha2.js'
-import { concatBytes, randomBytes, utf8ToBytes } from '@noble/hashes/utils.js'
+import { concatBytes, randomBytes } from '@noble/hashes/utils.js'
 
 export const TOKEN_TYPE = new Uint8Array([0, 1])
 export const CONTEXT = 'OPRFV1--P384-SHA384'
@@ -37,12 +37,8 @@ const invert = (value: bigint): bigint => {
   if (oldR !== 1n) throw new Error('Blind scalar is not invertible')
   return mod(oldS)
 }
-const hashScalar = (...items: Uint8Array[]): bigint => {
-  const digest = sha384(concatBytes(...items))
-  let value = 0n
-  for (const byte of digest) value = (value << 8n) + BigInt(byte)
-  return mod(value) || 1n
-}
+const hashScalar = (input: Uint8Array): bigint =>
+  p384_hasher.hashToScalar(input, { DST: bytes(`HashToScalar-${CONTEXT}`) })
 
 export const hashToGroup = (input: Uint8Array): Point =>
   p384_hasher.hashToCurve(input, { DST: bytes(`HashToGroup-${CONTEXT}`) })
@@ -56,22 +52,32 @@ export const blind = (input: Uint8Array, blindScalar = scalar()): BlindResult =>
 
 export const evaluate = (secretKey: bigint, blinded: Point): Point => blinded.multiply(secretKey)
 
-const transcript = (pk: Point, blinded: Point, evaluated: Point, a: Point, b: Point): Uint8Array =>
-  concatBytes(bytes('PrivacyPass-DLEQ-v1'), pointBytes(pk), pointBytes(blinded), pointBytes(evaluated), pointBytes(a), pointBytes(b))
+const frame = (value: Uint8Array): Uint8Array => concatBytes(i2osp(value.length), value)
+const composite = (issuerPublicKey: Point, blinded: Point, evaluated: Point): { m: Point; z: Point } => {
+  const pk = pointBytes(issuerPublicKey)
+  const seedDst = bytes(`Seed-${CONTEXT}`)
+  const seed = sha384(concatBytes(frame(pk), frame(seedDst)))
+  const coefficient = hashScalar(concatBytes(frame(seed), i2osp(0), frame(pointBytes(blinded)), frame(pointBytes(evaluated)), bytes('Composite')))
+  return { m: blinded.multiply(coefficient), z: evaluated.multiply(coefficient) }
+}
+const challenge = (issuerPublicKey: Point, m: Point, z: Point, t2: Point, t3: Point): bigint =>
+  hashScalar(concatBytes(frame(pointBytes(issuerPublicKey)), frame(pointBytes(m)), frame(pointBytes(z)), frame(pointBytes(t2)), frame(pointBytes(t3)), bytes('Challenge')))
 
 export const proveDleq = (secretKey: bigint, blinded: Point, evaluated: Point, nonce = scalar()): Proof => {
   const pk = publicKey(secretKey)
+  const { m } = composite(pk, blinded, evaluated)
   const a = publicKey(nonce)
-  const b = blinded.multiply(nonce)
-  const c = hashScalar(transcript(pk, blinded, evaluated, a, b))
+  const b = m.multiply(nonce)
+  const c = challenge(pk, m, m.multiply(secretKey), a, b)
   return { c, s: mod(nonce - c * secretKey) }
 }
 
 export const verifyDleq = (issuerPublicKey: Point, blinded: Point, evaluated: Point, proof: Proof): boolean => {
   if (proof.c === 0n || proof.s === 0n) return false
+  const { m, z } = composite(issuerPublicKey, blinded, evaluated)
   const a = publicKey(proof.s).add(issuerPublicKey.multiply(proof.c))
-  const b = blinded.multiply(proof.s).add(evaluated.multiply(proof.c))
-  return hashScalar(transcript(issuerPublicKey, blinded, evaluated, a, b)) === proof.c
+  const b = m.multiply(proof.s).add(z.multiply(proof.c))
+  return challenge(issuerPublicKey, m, z, a, b) === proof.c
 }
 
 export const finalize = (input: Uint8Array, blindScalar: bigint, evaluated: Point): Uint8Array => {

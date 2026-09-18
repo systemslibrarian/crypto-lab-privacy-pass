@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try { localStorage.setItem('theme', 'dark') } catch (error) {}
+        document.documentElement.setAttribute('data-theme', 'dark')
+      })()
+    </script>
+    <meta name="description" content="An interactive RFC 9578 Privacy Pass token issuance using VOPRF(P-384, SHA-384)." />
+    <title>Privacy Pass — crypto-lab</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>&lt;text y='.9em' font-size='90'>🎟️&lt;/text>&lt;/svg>" />
+  </head>
+  <body>
+    <a class="skip-link" href="#app">Skip to demo</a>
+    <header class="cl-topbar" role="banner">
+      <a class="brand" href="https://crypto-lab.systemslibrarian.dev/">CRYPTO LAB</a>
+      <span class="topbar-label">Privacy primitives, inspected</span>
+      <a class="source" href="https://github.com/systemslibrarian/crypto-lab-privacy-pass">Source</a>
+    </header>
+    <main id="app"></main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite'
-import { resolve } from 'node:path'
 
 export default defineConfig({
   base: '/crypto-lab-privacy-pass/',
@@ -8,8 +7,5 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-  },
-  resolve: {
-    alias: { '@': resolve(__dirname, 'src') },
   },
 })
