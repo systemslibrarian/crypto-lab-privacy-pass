@@ -18,6 +18,7 @@ export const equal = (left: Uint8Array, right: Uint8Array): boolean =>
 export const hex = (value: Uint8Array): string => Array.from(value, (byte) => byte.toString(16).padStart(2, '0')).join('')
 export const scalar = (): bigint => p384.Point.Fn.fromBytes(p384.utils.randomSecretKey())
 export const pointBytes = (point: Point): Uint8Array => point.toBytes(true)
+export const scalarBytes = (value: bigint): Uint8Array => p384.Point.Fn.toBytes(value)
 export const publicKey = (secretKey: bigint): Point => p384.Point.BASE.multiply(secretKey)
 export const keyId = (issuerPublicKey: Point): Uint8Array => sha256(pointBytes(issuerPublicKey))
 export const truncatedKeyId = (issuerPublicKey: Point): number => keyId(issuerPublicKey).at(-1)!

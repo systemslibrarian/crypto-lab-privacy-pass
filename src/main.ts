@@ -1,11 +1,12 @@
 import './styles.css'
-import { hex, keyId, pointBytes, publicKey } from './oprf/voprf.js'
-import { Client, Issuer, Origin, type Issuance } from './pass/privacy-pass.js'
+import { hex, keyId, pointBytes } from './oprf/voprf.js'
+import { Client, Issuer, Origin, issuerCanLink, serializeRequest, serializeResponse, serializeToken, type Issuance } from './pass/privacy-pass.js'
 
 const challenge = { issuerName: 'issuer.privacy-pass.test', originInfo: 'news.example', redemptionContext: new Uint8Array() }
 const issuer = new Issuer(0x123456789abcdef123456789abcdef123456789abcdef123456789abcdefn)
 const origin = new Origin()
 let issuance: Issuance | undefined
+let partitioned: Array<{ client: string; issuer: Issuer; issuance: Issuance; origin: Origin }> = []
 let mode: 'private' | 'unblinded' | 'partitioned' = 'private'
 
 const $ = <T extends Element>(selector: string): T => document.querySelector<T>(selector)!
@@ -29,17 +30,20 @@ function render(): void {
     <section class="flow" aria-label="Protocol flow"><article><span class="step">01</span><h2>Client blinds</h2><p id="client-detail">The nonce and challenge become an input point, multiplied by a fresh secret blind.</p></article><article><span class="step">02</span><h2>Issuer proves</h2><p id="issuer-detail">It sees only a blinded point and returns an evaluation with a DLEQ proof.</p></article><article><span class="step">03</span><h2>Origin redeems</h2><p id="origin-detail">It privately re-evaluates the token input and records the nonce once.</p></article></section>
     <section class="ledgers" aria-label="Role ledgers"><article class="ledger"><div class="ledger-head"><p class="eyebrow">ISSUER LEDGER</p><span>What it received</span></div><div id="issuer-ledger" class="ledger-body" role="region" tabindex="0" aria-label="Issuer ledger"><p class="empty">No issuance yet.</p></div></article><article class="ledger"><div class="ledger-head"><p class="eyebrow">ORIGIN LEDGER</p><span>What it verified</span></div><div id="origin-ledger" class="ledger-body" role="region" tabindex="0" aria-label="Origin ledger"><p class="empty">No redemption yet.</p></div></article></section>
     <section class="verdicts" aria-label="Protocol verdicts"><div id="dleq" class="verdict neutral">DLEQ PROOF · waiting</div><div id="redeem-verdict" class="verdict neutral">REDEMPTION · waiting</div><div id="link-verdict" class="verdict neutral">COLLUSION CHECK · waiting</div></section>
-    <details><summary>Inspect the real values and scope</summary><dl><dt>Published P-384 key</dt><dd id="pk">${hex(pointBytes(issuer.publicKey))}</dd><dt>RFC 9578 token key id</dt><dd id="key-id">${hex(keyId(issuer.publicKey))}</dd><dt>What this is not</dt><dd>No HTTP transport, attester, rate-limit model, key-consistency protocol, batched issuance, or Blind RSA implementation is included. This is not production crypto.</dd></dl></details>
+    <p id="negative-claim" class="negative-claim" hidden>The DLEQ proof shows the issuer used the key it published to this client; it does not show it published the same key to every client. Key consistency is outside RFC 9578 and outside this page.</p>
+    <details><summary>Inspect the real wire values and scope</summary><dl><dt>Published P-384 key</dt><dd id="pk">${hex(pointBytes(issuer.publicKey))}</dd><dt>RFC 9578 token key id</dt><dd id="key-id">${hex(keyId(issuer.publicKey))}</dd><dt>TokenRequest · 52 bytes</dt><dd id="wire-request">Issue a token to populate.</dd><dt>TokenResponse · 145 bytes</dt><dd id="wire-response">Issue a token to populate.</dd><dt>Token · 146 bytes</dt><dd id="wire-token">Issue a token to populate.</dd><dt>What this is not</dt><dd>No HTTP transport, attester, rate-limit model, key-consistency protocol, batched issuance, or Blind RSA implementation is included. This is not production crypto.</dd></dl></details>
     <section class="comparison"><h2>Type 0x0001 is not type 0x0002</h2><p>This page implements VOPRF(P-384, SHA-384), whose origin verifies with the issuer secret key. RFC 9474 Blind RSA tokens are publicly verifiable and use a different construction; see the Crypto Lab Blind Sign demo for that comparison.</p></section>
     <footer class="scripture-footer"><p>So whether you eat or drink or whatever you do, do it all for the glory of God. — 1 Corinthians 10:31</p></footer>`
   document.querySelectorAll<HTMLInputElement>('input[name="mode"]').forEach((input) => input.addEventListener('change', () => {
     mode = input.value as typeof mode
     issuance = undefined
+    partitioned = []
     $('#redeem').setAttribute('disabled', '')
     $('#link').setAttribute('disabled', '')
     $('#replay').setAttribute('disabled', '')
     $('#issuer-ledger').innerHTML = '<p class="empty">Prior verdict retired after mode change.</p>'
     $('#origin-ledger').innerHTML = '<p class="empty">Prior verdict retired after mode change.</p>'
+    $('#negative-claim').setAttribute('hidden', '')
     status('Prior result retired. Issue a new token for this mode.')
   }))
   $('#issue').addEventListener('click', issue)
@@ -51,13 +55,28 @@ function render(): void {
 function issue(): void {
   try {
     if (mode === 'partitioned') {
-      new Client().issue(issuer, challenge, { verifyKey: publicKey(987n) })
+      const aliceIssuer = new Issuer(0xaaa111n)
+      const bobIssuer = new Issuer(0xbbb222n)
+      partitioned = [
+        { client: 'Alice', issuer: aliceIssuer, issuance: new Client().issue(aliceIssuer, challenge), origin: new Origin() },
+        { client: 'Bob', issuer: bobIssuer, issuance: new Client().issue(bobIssuer, challenge), origin: new Origin() },
+      ]
+      $('#issuer-ledger').innerHTML = partitioned.map(({ client, issuer: clientIssuer }) => `<p><b>${client}</b> · proof verified</p><code>published key id: ${short(keyId(clientIssuer.publicKey))}</code>`).join('')
+      $('#client-detail').textContent = 'Alice and Bob each receive a valid proof under the different key published to them.'
+      $('#issuer-detail').textContent = 'BROKEN: the issuer partitions clients with two valid keys; neither client sees the inconsistency.'
+      $('#dleq').className = 'verdict good'; $('#dleq').textContent = 'DLEQ PROOFS · BOTH VERIFIED'
+      $('#negative-claim').removeAttribute('hidden')
+      $('#redeem').removeAttribute('disabled'); $('#link').removeAttribute('disabled'); $('#replay').setAttribute('disabled', '')
+      status('Both clients finalized valid tokens. The missing property is global key consistency.')
     } else {
       issuance = new Client().issue(issuer, challenge, { blindScalar: mode === 'unblinded' ? 1n : undefined })
       $('#issuer-ledger').innerHTML = `<p><b>Request received</b></p><code>blinded element: ${short(pointBytes(issuance.request.blinded))}</code><p>truncated key id: <b>${issuance.request.truncatedTokenKeyId}</b></p><p>It cannot see the nonce or challenge digest.</p>`
       $('#client-detail').textContent = mode === 'unblinded' ? 'BROKEN: blind = 1, so the issuer receives the raw hash-to-group point.' : 'Fresh random blind multiplied the hash-to-group token input.'
       $('#issuer-detail').textContent = 'Evaluated blinded point and generated a DLEQ proof under the published key.'
       $('#dleq').className = 'verdict good'; $('#dleq').textContent = 'DLEQ PROOF · VERIFIED'
+      $('#wire-request').textContent = hex(serializeRequest(issuance.request))
+      $('#wire-response').textContent = hex(serializeResponse(issuance.response))
+      $('#wire-token').textContent = hex(serializeToken(issuance.token))
       $('#redeem').removeAttribute('disabled'); $('#link').removeAttribute('disabled'); $('#replay').removeAttribute('disabled')
       status(mode === 'unblinded' ? 'BROKEN mode issued: the request is directly linkable.' : 'Token finalized after the real DLEQ proof verified.')
     }
@@ -70,6 +89,16 @@ function issue(): void {
   }
 }
 function redeem(): void {
+  if (partitioned.length) {
+    const results = partitioned.map((entry) => ({ ...entry, result: entry.origin.redeem(entry.issuance.token, challenge, entry.issuer) }))
+    $('#origin-ledger').innerHTML = results.map(({ client, issuance: clientIssuance, result }) => `<p><b>${client}</b> · ${result.ok ? 'verified' : 'refused'}</p><code>token key id: ${short(clientIssuance.token.tokenKeyId)}</code>`).join('')
+    const allVerified = results.every(({ result }) => result.ok)
+    $('#redeem-verdict').className = `verdict ${allVerified ? 'good' : 'alarm'}`
+    $('#redeem-verdict').textContent = `REDEMPTIONS · ${allVerified ? 'BOTH VERIFIED' : 'REFUSED'}`
+    $('#origin-detail').textContent = 'Both authenticators verify and both fresh nonces are accepted.'
+    status(allVerified ? 'Both tokens redeemed successfully under their respective issuer keys.' : 'A partition fixture redemption failed.', allVerified)
+    return
+  }
   if (!issuance) return
   const result = origin.redeem(issuance.token, challenge, issuer)
   $('#origin-ledger').innerHTML = `<p><b>${result.ok ? 'Token redeemed' : 'Token refused'}</b></p><code>nonce: ${short(issuance.token.nonce)}</code><code>authenticator: ${short(issuance.token.authenticator)}</code><p>${result.reason}</p>`
@@ -79,8 +108,16 @@ function redeem(): void {
   status(result.reason, result.ok)
 }
 function link(): void {
+  if (partitioned.length) {
+    const buckets = new Set(partitioned.map(({ issuance: clientIssuance }) => hex(clientIssuance.token.tokenKeyId)))
+    const linked = buckets.size === partitioned.length
+    $('#link-verdict').className = `verdict ${linked ? 'alarm' : 'good'}`
+    $('#link-verdict').textContent = linked ? 'PROOFS VERIFIED · AND PARTITIONED' : 'COLLUSION CHECK · NO PARTITION'
+    status(linked ? 'ALARM: colluding issuer and origin sort both redemptions by the client-specific key id.' : 'No client-specific key partition was found.', !linked)
+    return
+  }
   if (!issuance) return
-  const linked = mode === 'unblinded'
+  const linked = issuerCanLink(issuance)
   $('#link-verdict').className = `verdict ${linked ? 'alarm' : 'good'}`
   $('#link-verdict').textContent = linked ? 'COLLUSION CHECK · LINKED: BLINDING WAS REMOVED' : 'COLLUSION CHECK · NO COMPUTABLE MATCH'
   status(linked ? 'ALARM: issuer hash-to-group value equals the origin-computable input point.' : 'Issuer and origin have no shared equality-testable value.', !linked)

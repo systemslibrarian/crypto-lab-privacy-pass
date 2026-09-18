@@ -1,6 +1,6 @@
 import { sha256 } from '@noble/hashes/sha2.js'
 import { concatBytes, utf8ToBytes } from '@noble/hashes/utils.js'
-import { blind, directEvaluate, equal, evaluate, finalize, keyId, type Point, proveDleq, publicKey, randomNonce, TOKEN_TYPE, truncatedKeyId, verifyDleq, type Proof } from '../oprf/voprf.js'
+import { blind, directEvaluate, equal, evaluate, finalize, hashToGroup, keyId, pointBytes, type Point, proveDleq, publicKey, randomNonce, scalarBytes, TOKEN_TYPE, truncatedKeyId, verifyDleq, type Proof } from '../oprf/voprf.js'
 
 export type Challenge = { issuerName: string; originInfo: string; redemptionContext: Uint8Array }
 export type Token = { nonce: Uint8Array; challengeDigest: Uint8Array; tokenKeyId: Uint8Array; authenticator: Uint8Array }
@@ -27,6 +27,14 @@ export const challengeDigest = (challenge: Challenge): Uint8Array =>
   sha256(serializeChallenge(challenge))
 export const tokenInput = (nonce: Uint8Array, challenge: Challenge, issuerPublicKey: Point): Uint8Array =>
   concatBytes(TOKEN_TYPE, nonce, challengeDigest(challenge), keyId(issuerPublicKey))
+export const serializeRequest = (request: Request): Uint8Array =>
+  concatBytes(TOKEN_TYPE, new Uint8Array([request.truncatedTokenKeyId]), pointBytes(request.blinded))
+export const serializeResponse = (response: Response): Uint8Array =>
+  concatBytes(pointBytes(response.evaluated), scalarBytes(response.proof.c), scalarBytes(response.proof.s))
+export const serializeToken = (token: Token): Uint8Array =>
+  concatBytes(TOKEN_TYPE, token.nonce, token.challengeDigest, token.tokenKeyId, token.authenticator)
+export const issuerCanLink = (issuance: Issuance): boolean =>
+  hashToGroup(issuance.input).equals(issuance.request.blinded)
 
 export class Issuer {
   readonly publicKey: Point
@@ -42,8 +50,9 @@ export class Issuer {
 }
 
 export class Client {
-  issue(issuer: Issuer, challenge: Challenge, options: { blindScalar?: bigint; verifyKey?: Point; tamperProof?: boolean } = {}): Issuance {
-    const nonce = randomNonce()
+  issue(issuer: Issuer, challenge: Challenge, options: { blindScalar?: bigint; nonce?: Uint8Array; verifyKey?: Point; tamperProof?: boolean } = {}): Issuance {
+    const nonce = options.nonce ?? randomNonce()
+    if (nonce.length !== 32) throw new Error('Token nonce must be 32 bytes')
     const input = tokenInput(nonce, challenge, issuer.publicKey)
     const requestBlind = blind(input, options.blindScalar)
     const request = { blinded: requestBlind.blinded, truncatedTokenKeyId: truncatedKeyId(issuer.publicKey) }

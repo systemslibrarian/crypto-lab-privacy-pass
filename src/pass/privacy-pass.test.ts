@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { p384 } from '@noble/curves/nist.js'
 import { hexToBytes } from '@noble/hashes/utils.js'
 import { blind, evaluate, finalize, pointBytes, proveDleq, publicKey, verifyDleq } from '../oprf/voprf.js'
-import { Client, Issuer, Origin, serializeChallenge, tokenInput } from './privacy-pass.js'
+import { Client, Issuer, Origin, issuerCanLink, serializeChallenge, serializeRequest, serializeResponse, serializeToken, tokenInput } from './privacy-pass.js'
 
 const challenge = { issuerName: 'issuer.example', originInfo: 'origin.example', redemptionContext: new Uint8Array() }
 const issuer = () => new Issuer(0x123456789abcdef123456789abcdef123456789abcdef123456789abcdefn)
@@ -35,7 +35,23 @@ describe('RFC 9578 type 0x0001 teaching implementation', () => {
     const expectedRequest = '0001f4030ab3e23181d1e213f24315f5775983c678ce22eff9427610832ab3900f2cd12d6829a07ec8a6813cf0b5b886f4cc4979'
 
     expect(serializeChallenge(vectorChallenge)).toEqual(hexToBytes(expectedChallenge))
-    expect(pointBytes(blind(tokenInput(nonce, vectorChallenge, issuerPublicKey), blindScalar).blinded)).toEqual(hexToBytes(expectedRequest.slice(6)))
+    const request = { blinded: blind(tokenInput(nonce, vectorChallenge, issuerPublicKey), blindScalar).blinded, truncatedTokenKeyId: 0xf4 }
+    expect(serializeRequest(request)).toEqual(hexToBytes(expectedRequest))
+  })
+
+  it('serializes complete response and token wire structures', () => {
+    const activeIssuer = issuer()
+    const issuance = new Client().issue(activeIssuer, challenge, { blindScalar: 17n, nonce: new Uint8Array(32).fill(7) })
+    expect(serializeRequest(issuance.request)).toHaveLength(52)
+    expect(serializeResponse(issuance.response)).toHaveLength(145)
+    expect(serializeToken(issuance.token)).toHaveLength(146)
+    expect(serializeToken(issuance.token).slice(0, 2)).toEqual(new Uint8Array([0, 1]))
+  })
+
+  it('derives ledger linkability from the request point instead of mode state', () => {
+    const activeIssuer = issuer()
+    expect(issuerCanLink(new Client().issue(activeIssuer, challenge, { blindScalar: 1n }))).toBe(true)
+    expect(issuerCanLink(new Client().issue(activeIssuer, challenge, { blindScalar: 17n }))).toBe(false)
   })
 
   it('blindly issues a token the origin can privately verify', () => {
