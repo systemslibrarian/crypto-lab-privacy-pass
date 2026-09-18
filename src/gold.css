@@ -44,9 +44,11 @@
   fill: var(--alarm);
 }
 
-.computed-link text {
-  fill: var(--text);
-  font: 700 8px Arial, sans-serif;
+.link-labels {
+  color: var(--text);
+  font-size: .78rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 @keyframes draw-link {

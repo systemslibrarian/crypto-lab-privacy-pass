@@ -135,9 +135,9 @@ function replay(): void { if (issuance) redeem() }
 function linkDiagram(count: number, labels: string[]): string {
   const lines = Array.from({ length: count }, (_, index) => {
     const y = count === 1 ? 50 : 30 + index * 40
-    return `<g class="computed-link"><line x1="18" y1="${y}" x2="182" y2="${y}"/><circle cx="18" cy="${y}" r="4"/><circle cx="182" cy="${y}" r="4"/><text x="100" y="${y - 7}" text-anchor="middle">${labels[index]}</text></g>`
+    return `<g class="computed-link"><line x1="18" y1="${y}" x2="182" y2="${y}"/><circle cx="18" cy="${y}" r="4"/><circle cx="182" cy="${y}" r="4"/></g>`
   }).join('')
-  return `<svg viewBox="0 0 200 100" aria-hidden="true" focusable="false">${lines}</svg>`
+  return `<svg viewBox="0 0 200 100" aria-hidden="true" focusable="false">${lines}</svg><p class="link-labels">${labels.join(' · ')}</p>`
 }
 
 render()
