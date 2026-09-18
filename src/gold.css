@@ -1,0 +1,15 @@
+:root {
+  --border: #718077;
+}
+
+.negative-claim {
+  border: 2px solid var(--alarm);
+  padding: 0.85rem 1rem;
+  background-color: #2a1918;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.negative-claim[hidden] {
+  display: none;
+}

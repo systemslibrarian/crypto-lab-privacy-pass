@@ -1,4 +1,5 @@
 import './styles.css'
+import './gold.css'
 import { hex, keyId, pointBytes } from './oprf/voprf.js'
 import { Client, Issuer, Origin, issuerCanLink, serializeRequest, serializeResponse, serializeToken, type Issuance } from './pass/privacy-pass.js'
 

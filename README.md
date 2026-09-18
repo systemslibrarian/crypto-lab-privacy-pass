@@ -9,7 +9,7 @@ An in-browser teaching demo of RFC 9578 token type `0x0001`: VOPRF(P-384, SHA-38
 1. Issue a token to watch the client blind its token input, the issuer evaluate it, and the client reject or accept the DLEQ proof before finalizing.
 2. Redeem the token at a separate origin. The origin recomputes the VOPRF output with the issuer key and rejects a reused nonce in the browser-session spent set.
 3. Pool the issuer and origin ledgers. Correct blinding leaves no equality-testable link; choosing `BROKEN: remove blinding` makes the matching input point visible and triggers an alarm.
-4. Choose `BROKEN: per-client published key` to see why a DLEQ proof must be checked against the public key the client was given. The client aborts before producing a token.
+4. Choose `BROKEN: per-client published key` to give Alice and Bob different issuer keys. Both DLEQ proofs verify and both tokens redeem, but a colluding issuer and origin can partition the redemptions by key id.
 
 ## When to Use It
 
@@ -49,7 +49,7 @@ npx playwright install --with-deps chromium
 npm run test:a11y
 ```
 
-The unit suite has 6 tests: RFC 9497 Appendix A.4.2.1 VOPRF and RFC 9578 Appendix A.1 token-request vectors, successful private verification, proof tampering rejection, wrong-published-key rejection, and replay rejection. The Playwright gate has 5 tests: a WCAG 2.1 A/AA scan plus four user-visible claims. The implementation follows [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497), [RFC 9578](https://www.rfc-editor.org/rfc/rfc9578), and [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380).
+The unit suite has 8 tests: RFC 9497 Appendix A.4.2.1 VOPRF and RFC 9578 Appendix A.1 token-request vectors, complete wire serialization, value-derived linkability, successful private verification, proof tampering rejection, wrong-published-key rejection, and replay rejection. The Playwright gate checks WCAG 2.1 A/AA, arithmetic palette contrast, responsive overflow, complete rendered wire lengths, both privacy failures, replay, verdict retirement, and `[hidden]` behavior. The implementation follows [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497), [RFC 9578](https://www.rfc-editor.org/rfc/rfc9578), and [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380).
 
 ## Performance
 
