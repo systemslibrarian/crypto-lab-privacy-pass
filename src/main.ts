@@ -2,7 +2,7 @@ import './styles.css'
 import { hex, keyId, pointBytes, publicKey } from './oprf/voprf.js'
 import { Client, Issuer, Origin, type Issuance } from './pass/privacy-pass.js'
 
-const challenge = { issuerName: 'issuer.privacy-pass.test', redemptionContext: 'news.example' }
+const challenge = { issuerName: 'issuer.privacy-pass.test', originInfo: 'news.example', redemptionContext: new Uint8Array() }
 const issuer = new Issuer(0x123456789abcdef123456789abcdef123456789abcdef123456789abcdefn)
 const origin = new Origin()
 let issuance: Issuance | undefined

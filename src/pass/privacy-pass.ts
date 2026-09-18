@@ -2,15 +2,29 @@ import { sha256 } from '@noble/hashes/sha2.js'
 import { concatBytes, utf8ToBytes } from '@noble/hashes/utils.js'
 import { blind, directEvaluate, equal, evaluate, finalize, keyId, type Point, proveDleq, publicKey, randomNonce, TOKEN_TYPE, truncatedKeyId, verifyDleq, type Proof } from '../oprf/voprf.js'
 
-export type Challenge = { issuerName: string; redemptionContext: string }
+export type Challenge = { issuerName: string; originInfo: string; redemptionContext: Uint8Array }
 export type Token = { nonce: Uint8Array; challengeDigest: Uint8Array; tokenKeyId: Uint8Array; authenticator: Uint8Array }
 export type Request = { blinded: Point; truncatedTokenKeyId: number }
 export type Response = { evaluated: Point; proof: Proof }
 export type Issuance = { token: Token; request: Request; response: Response; input: Uint8Array }
 
 const u8 = (value: string): Uint8Array => utf8ToBytes(value)
+const i2osp = (value: number): Uint8Array => new Uint8Array([(value >>> 8) & 0xff, value & 0xff])
+export const serializeChallenge = (challenge: Challenge): Uint8Array => {
+  const issuerName = u8(challenge.issuerName)
+  const originInfo = u8(challenge.originInfo)
+  const redemptionContext = challenge.redemptionContext
+  if (issuerName.length === 0 || issuerName.length > 0xffff || !/^[\x20-\x7e]+$/.test(challenge.issuerName)) {
+    throw new Error('TokenChallenge issuer name must be non-empty ASCII')
+  }
+  if (redemptionContext.length !== 0 && redemptionContext.length !== 32) {
+    throw new Error('TokenChallenge redemption context must be empty or 32 bytes')
+  }
+  if (originInfo.length > 0xffff) throw new Error('TokenChallenge origin information is too long')
+  return concatBytes(TOKEN_TYPE, i2osp(issuerName.length), issuerName, new Uint8Array([redemptionContext.length]), redemptionContext, i2osp(originInfo.length), originInfo)
+}
 export const challengeDigest = (challenge: Challenge): Uint8Array =>
-  sha256(concatBytes(u8(challenge.issuerName), new Uint8Array([0]), u8(challenge.redemptionContext)))
+  sha256(serializeChallenge(challenge))
 export const tokenInput = (nonce: Uint8Array, challenge: Challenge, issuerPublicKey: Point): Uint8Array =>
   concatBytes(TOKEN_TYPE, nonce, challengeDigest(challenge), keyId(issuerPublicKey))
 

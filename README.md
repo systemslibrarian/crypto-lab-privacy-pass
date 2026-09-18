@@ -49,7 +49,7 @@ npx playwright install --with-deps chromium
 npm run test:a11y
 ```
 
-The unit suite has 4 invariant tests: successful private verification, proof tampering rejection, wrong-published-key rejection, and replay rejection. The Playwright gate has 5 tests: a WCAG 2.1 A/AA scan plus four user-visible claims. The implementation follows [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497), [RFC 9578](https://www.rfc-editor.org/rfc/rfc9578), and [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380); it does not currently claim RFC appendix-vector coverage.
+The unit suite has 6 tests: RFC 9497 Appendix A.4.2.1 VOPRF and RFC 9578 Appendix A.1 token-request vectors, successful private verification, proof tampering rejection, wrong-published-key rejection, and replay rejection. The Playwright gate has 5 tests: a WCAG 2.1 A/AA scan plus four user-visible claims. The implementation follows [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497), [RFC 9578](https://www.rfc-editor.org/rfc/rfc9578), and [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380).
 
 ## Performance
 
