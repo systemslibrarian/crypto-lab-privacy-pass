@@ -14,19 +14,29 @@ const STEPS = ['1. Issue token', '2. Redeem at origin', '3. Try to link ledgers'
 
 /** Drives every reachable protocol state and hands the caller a fresh scan of each one. */
 async function walkEveryState(page: Page, visit: (state: string, scan: VerdictScan) => void): Promise<void> {
-  await page.goto('/')
-  visit('initial', await page.evaluate(collectVerdicts, VERDICT_WORDS))
-  for (const mode of MODES) {
-    await page.goto('/')
+  const scan = async (state: string): Promise<void> => visit(state, await page.evaluate(collectVerdicts, VERDICT_WORDS))
+  const driveMode = async (mode: (typeof MODES)[number], prefix: string): Promise<void> => {
     await page.getByLabel(mode.label).check()
-    visit(`${mode.name}: selected`, await page.evaluate(collectVerdicts, VERDICT_WORDS))
+    await scan(`${prefix}${mode.name}: selected`)
     for (const step of STEPS) {
       const control = page.getByRole('button', { name: step })
       if (!(await control.isEnabled())) continue
       await control.click()
-      visit(`${mode.name}: ${step}`, await page.evaluate(collectVerdicts, VERDICT_WORDS))
+      await scan(`${prefix}${mode.name}: ${step}`)
     }
   }
+
+  await page.goto('/')
+  await scan('initial')
+  for (const mode of MODES) {
+    await page.goto('/')
+    await driveMode(mode, '')
+  }
+
+  // Switching modes in place is a distinct set of states: prior verdicts are retired rather than
+  // replaced, and a fresh load never reaches them.
+  await page.goto('/')
+  for (const mode of MODES) await driveMode(mode, 'retired -> ')
 }
 
 test('every verdict the page renders has a mutation that forced it false', async ({ page }) => {
