@@ -3,3 +3,8 @@ dist/
 test-results/
 playwright-report/
 *.tsbuildinfo
+# The master template is a copy of the catalog original; a committed copy ages
+# into a second, wrong standard. Keep it on disk, out of the index.
+_MASTER-TEMPLATE.md
+CRYPTO-LAB-TEMPLATE.md
+template.md
