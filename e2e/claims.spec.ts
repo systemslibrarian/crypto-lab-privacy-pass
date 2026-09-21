@@ -48,6 +48,20 @@ test('valid proofs under client-specific keys redeem and reveal partitioning', a
   await expect(page.locator('#negative-claim')).toContainText('does not show it published the same key to every client')
 })
 
+test('an unpublished issuer key aborts issuance, and the token a careless client keeps is refused', async ({ page }) => {
+  await page.getByLabel(/BROKEN: unpublished issuer key/).check()
+  await page.getByRole('button', { name: '1. Issue token' }).click()
+  await expect(page.getByText('DLEQ PROOF · REJECTED AS DESIGNED')).toBeVisible()
+  await expect(page.locator('#issuer-ledger')).toContainText('BROKEN unpublished-key mode')
+  await expect(page.locator('#status')).toContainText('A careful client receives no token')
+  const ledgerKeys = await page.locator('#issuer-ledger code').allTextContents()
+  expect(ledgerKeys).toHaveLength(2)
+  expect(ledgerKeys[0].replace(/^trusted key id: /, '')).not.toBe(ledgerKeys[1].replace(/^answered under: /, ''))
+  await expect(page.getByText('SKIPPED-CHECK TOKEN · REFUSED')).toBeVisible()
+  await expect(page.locator('#origin-ledger')).toContainText('Token key id does not match the issuer public key')
+  await expect(page.getByRole('button', { name: '2. Redeem at origin' })).toBeDisabled()
+})
+
 test('a redeemed token cannot be replayed', async ({ page }) => {
   await page.getByRole('button', { name: '1. Issue token' }).click()
   await page.getByRole('button', { name: '2. Redeem at origin' }).click()

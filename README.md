@@ -10,6 +10,7 @@ An in-browser teaching demo of RFC 9578 token type `0x0001`: VOPRF(P-384, SHA-38
 2. Redeem the token at a separate origin. The origin recomputes the VOPRF output with the issuer key and rejects a reused nonce in the browser-session spent set.
 3. Pool the issuer and origin ledgers. Correct blinding leaves no equality-testable link; choosing `BROKEN: remove blinding` makes the matching input point visible and triggers an alarm.
 4. Choose `BROKEN: per-client published key` to give Alice and Bob different issuer keys. Both DLEQ proofs verify and both tokens redeem, but a colluding issuer and origin can partition the redemptions by key id.
+5. Choose `BROKEN: unpublished issuer key` to have the issuer answer under a key it never published. The DLEQ proof is valid under the issuer's own key and worthless against the published one, so the careful client aborts before finalizing, and the sub-panel shows the origin refusing the token a client that skipped that check would have kept.
 
 ## When to Use It
 
@@ -49,7 +50,7 @@ npx playwright install --with-deps chromium
 npm run test:a11y
 ```
 
-The unit suite has 16 tests, including all 3 RFC 9497 Appendix A.4.2 P-384 VOPRF vectors and all 5 RFC 9578 Appendix A.1 type-`0x0001` issuance vectors. It also covers complete wire parsing and serialization, batch proofs, value-derived linkability, proof failures, and replay rejection. The 10-test Playwright gate checks WCAG 2.1 A/AA, arithmetic palette contrast, responsive overflow, complete rendered wire lengths, both privacy failures, visual link counts, replay, verdict retirement, and `[hidden]` behavior. The implementation follows [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497), [RFC 9578](https://www.rfc-editor.org/rfc/rfc9578), and [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380).
+The unit suite has 16 tests, including all 3 RFC 9497 Appendix A.4.2 P-384 VOPRF vectors and all 5 RFC 9578 Appendix A.1 type-`0x0001` issuance vectors. It also covers complete wire parsing and serialization, batch proofs, value-derived linkability, proof failures, and replay rejection. The Playwright gate runs 12 tests from 11 declarations — the overflow check runs at two viewports — covering WCAG 2.1 A/AA on every reachable protocol state, arithmetic palette contrast, responsive overflow, complete rendered wire lengths, all three broken modes, visual link counts, the fail-closed abort, replay, verdict retirement, and `[hidden]` behavior. The implementation follows [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497), [RFC 9578](https://www.rfc-editor.org/rfc/rfc9578), and [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380).
 
 ## Performance
 

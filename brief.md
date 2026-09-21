@@ -138,3 +138,26 @@ RFC 9497, RFC 9576, RFC 9577, RFC 9578 (token types 0x0001 VOPRF(P-384, SHA-384)
 ---
 
 *"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31*
+
+---
+
+## Build record — where the build diverges from this brief (2026-09-21)
+
+Recorded here so a later reader diffing this brief against the build reads a decision rather
+than a defect.
+
+**Broken mode (b) ships as two modes, not one.** The brief specifies a single mode in which the
+issuer evaluates under a per-client key and the client's DLEQ check against the published key
+fails, aborting issuance. That mode is built, as `BROKEN: unpublished issuer key`, together with
+the sub-panel the brief asks for: the origin refusing the token a client that skipped the check
+would have kept.
+
+A second mode, `BROKEN: per-client published key`, was added beyond the brief. Template §4.1d
+requires a negative claim with an evidence fixture — a reachable state in which every check the
+page performs reports success and the named property is violated anyway. An aborting client is
+the opposite shape: a check that fails. So the added mode gives each client a valid proof under
+the key it was actually published, both tokens redeem, every verdict is green, and only a
+colluding issuer and origin can sort the redemptions into per-client key buckets. That is the
+fixture behind `#negative-claim`, and it is why the mode exists.
+
+Both modes ship. Neither replaces the other.

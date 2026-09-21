@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test'
 import { AxeBuilder } from '@axe-core/playwright'
 import { contrastRatio } from './contrast.js'
 import { auditNonText } from './nontext.js'
-import { NONTEXT_BASELINE } from './nontext-baseline.js'
 
 const tags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
@@ -11,7 +10,7 @@ async function scan(page: import('@playwright/test').Page, label: string): Promi
   expect(result.violations, `${label}: axe violations`).toEqual([])
   expect(result.incomplete, `${label}: axe incomplete results`).toEqual([])
   const nonText = await auditNonText(page)
-  expect(nonText, `${label}: non-text findings; baseline keys: ${Object.keys(NONTEXT_BASELINE).join(', ')}`).toEqual([])
+  expect(nonText, `${label}: non-text contrast findings (no suppression list exists; every control must pass)`).toEqual([])
   const invisibleText = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('body *')].filter((element) => {
     if (!element.checkVisibility({ checkVisibilityCSS: true })) return false
     const ownsText = [...element.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())
@@ -50,6 +49,9 @@ test('every reachable protocol state passes the complete gate', async ({ page })
   await page.getByRole('button', { name: '2. Redeem at origin' }).click()
   await page.getByRole('button', { name: '3. Try to link ledgers' }).click()
   await scan(page, 'key partitioned')
+  await page.getByLabel(/BROKEN: unpublished issuer key/).check()
+  await page.getByRole('button', { name: '1. Issue token' }).click()
+  await scan(page, 'unpublished key abort')
 })
 
 test('owned text and control-boundary colors meet arithmetic contrast thresholds', async () => {

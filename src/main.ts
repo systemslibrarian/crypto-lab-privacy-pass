@@ -8,7 +8,8 @@ const issuer = new Issuer(0x123456789abcdef123456789abcdef123456789abcdef1234567
 const origin = new Origin()
 let issuance: Issuance | undefined
 let partitioned: Array<{ client: string; issuer: Issuer; issuance: Issuance; origin: Origin }> = []
-let mode: 'private' | 'unblinded' | 'partitioned' = 'private'
+let skipped: { issuance: Issuance; verdict: { ok: boolean; reason: string } } | undefined
+let mode: 'private' | 'unblinded' | 'partitioned' | 'substituted' = 'private'
 
 const $ = <T extends Element>(selector: string): T => document.querySelector<T>(selector)!
 const short = (value: Uint8Array | string, length = 18): string => {
@@ -27,7 +28,7 @@ function render(): void {
       <aside class="cl-hero-why" aria-label="Why it matters"><span class="cl-hero-why-label">WHY IT MATTERS</span><p class="cl-hero-why-text">This is the token behind CAPTCHA-free anti-bot and rate-limit checks that need a signal without needing an identity. Remove the blinding and the wire format stays familiar, but the privacy guarantee disappears.</p></aside>
     </header>
     <section class="intro" aria-labelledby="what-title"><p class="eyebrow">WHAT YOU ARE WATCHING</p><h2 id="what-title">A receipt with no name on it</h2><p>An issuer vouches that it evaluated one request. An origin can verify the resulting token, but a correctly blinded request gives the issuer nothing it can match to that redemption. All three roles below run locally in this browser session; no request leaves this page.</p></section>
-    <section class="controls" aria-label="Experiment controls"><fieldset><legend>Experiment mode</legend><label><input type="radio" name="mode" value="private" checked> Private issuance</label><label><input type="radio" name="mode" value="unblinded"> <strong>BROKEN:</strong> remove blinding</label><label><input type="radio" name="mode" value="partitioned"> <strong>BROKEN:</strong> per-client published key</label></fieldset><div class="command-row"><button id="issue" type="button">1. Issue token</button><button id="redeem" type="button" disabled>2. Redeem at origin</button><button id="link" type="button" disabled>3. Try to link ledgers</button><button id="replay" type="button" disabled>Replay token</button></div><p id="status" class="status" role="status" aria-live="polite">Ready. Issue a token to begin.</p></section>
+    <section class="controls" aria-label="Experiment controls"><fieldset><legend>Experiment mode</legend><label><input type="radio" name="mode" value="private" checked> Private issuance</label><label><input type="radio" name="mode" value="unblinded"> <strong>BROKEN:</strong> remove blinding</label><label><input type="radio" name="mode" value="partitioned"> <strong>BROKEN:</strong> per-client published key</label><label><input type="radio" name="mode" value="substituted"> <strong>BROKEN:</strong> unpublished issuer key</label></fieldset><div class="command-row"><button id="issue" type="button">1. Issue token</button><button id="redeem" type="button" disabled>2. Redeem at origin</button><button id="link" type="button" disabled>3. Try to link ledgers</button><button id="replay" type="button" disabled>Replay token</button></div><p id="status" class="status" role="status" aria-live="polite">Ready. Issue a token to begin.</p></section>
     <section class="flow" aria-label="Protocol flow"><article><span class="step">01</span><h2>Client blinds</h2><p id="client-detail">The nonce and challenge become an input point, multiplied by a fresh secret blind.</p></article><article><span class="step">02</span><h2>Issuer proves</h2><p id="issuer-detail">It sees only a blinded point and returns an evaluation with a DLEQ proof.</p></article><article><span class="step">03</span><h2>Origin redeems</h2><p id="origin-detail">It privately re-evaluates the token input and records the nonce once.</p></article></section>
     <section class="ledgers" aria-label="Role ledgers"><article class="ledger"><div class="ledger-head"><p class="eyebrow">ISSUER LEDGER</p><span>What it received</span></div><div id="issuer-ledger" class="ledger-body" role="region" tabindex="0" aria-label="Issuer ledger"><p class="empty">No issuance yet.</p></div></article><article class="ledger"><div class="ledger-head"><p class="eyebrow">ORIGIN LEDGER</p><span>What it verified</span></div><div id="origin-ledger" class="ledger-body" role="region" tabindex="0" aria-label="Origin ledger"><p class="empty">No redemption yet.</p></div></article></section>
     <div id="link-map" class="link-map" role="img" aria-label="No ledger comparison has run"><p>Run “Try to link ledgers” to compare the values both parties hold.</p></div>
@@ -40,6 +41,7 @@ function render(): void {
     mode = input.value as typeof mode
     issuance = undefined
     partitioned = []
+    skipped = undefined
     $('#redeem').setAttribute('disabled', '')
     $('#link').setAttribute('disabled', '')
     $('#replay').setAttribute('disabled', '')
@@ -72,6 +74,14 @@ function issue(): void {
       $('#negative-claim').removeAttribute('hidden')
       $('#redeem').removeAttribute('disabled'); $('#link').removeAttribute('disabled'); $('#replay').setAttribute('disabled', '')
       status('Both clients finalized valid tokens. The missing property is global key consistency.')
+    } else if (mode === 'substituted') {
+      const rogue = new Issuer(0xfeedfacecafebeef0123456789abcdefn)
+      const careless = new Client().issue(rogue, challenge)
+      skipped = { issuance: careless, verdict: new Origin().redeem(careless.token, challenge, issuer) }
+      new Client().issue(rogue, challenge, { verifyKey: issuer.publicKey })
+      $('#dleq').className = 'verdict alarm'; $('#dleq').textContent = 'DLEQ PROOF · ACCEPTED AN UNPUBLISHED KEY'
+      $('#client-detail').textContent = 'ALARM: the client finalized against a key it was never told to trust.'
+      status('ALARM: DLEQ verification against the published key should have failed and did not.', false)
     } else {
       issuance = new Client().issue(issuer, challenge, { blindScalar: mode === 'unblinded' ? 1n : undefined })
       $('#issuer-ledger').innerHTML = `<p><b>Request received</b></p><code>blinded element: ${short(pointBytes(issuance.request.blinded))}</code><p>truncated key id: <b>${issuance.request.truncatedTokenKeyId}</b></p><p>It cannot see the nonce or challenge digest.</p>`
@@ -87,8 +97,17 @@ function issue(): void {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     $('#dleq').className = 'verdict good'; $('#dleq').textContent = 'DLEQ PROOF · REJECTED AS DESIGNED'
-    $('#issuer-ledger').innerHTML = '<p><b>BROKEN per-client key mode</b></p><p>The issuer answered with a key other than the one this client was told to trust.</p>'
+    $('#issuer-ledger').innerHTML = skipped
+      ? `<p><b>BROKEN unpublished-key mode</b></p><p>The issuer answered with a key other than the one this client was told to trust.</p><code>trusted key id: ${short(keyId(issuer.publicKey))}</code><code>answered under: ${short(skipped.issuance.token.tokenKeyId)}</code>`
+      : '<p><b>Issuance aborted</b></p><p>The client refused to finalize a token.</p>'
     $('#client-detail').textContent = 'Client aborted before finalization.'
+    $('#issuer-detail').textContent = 'BROKEN: the evaluation carries a valid proof, but under an unpublished key.'
+    if (skipped) {
+      $('#origin-ledger').innerHTML = `<p><b>A client that skipped the proof check</b> · finalized a token anyway</p><code>token key id: ${short(skipped.issuance.token.tokenKeyId)}</code><p>${skipped.verdict.reason}</p>`
+      $('#origin-detail').textContent = skipped.verdict.reason
+      $('#redeem-verdict').className = `verdict ${skipped.verdict.ok ? 'alarm' : 'good'}`
+      $('#redeem-verdict').textContent = `SKIPPED-CHECK TOKEN · ${skipped.verdict.ok ? 'ACCEPTED' : 'REFUSED'}`
+    }
     status(`${message}. A careful client receives no token.`, true)
   }
 }
