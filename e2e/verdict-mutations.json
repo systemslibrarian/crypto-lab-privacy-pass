@@ -1,5 +1,5 @@
 {
-  "$comment": "Every rendered verdict on this page carries a data-verdict marker, and every marker listed here has been forced false and watched go red. A mutation counts only when the unmutated baseline passed in the same run, the failure was that marker's OWN assertion, and the run served the mutated bundle (CI=1, port 4684, no reused server). e2e/verdicts.spec.ts fails on any rendered marker missing from this file.",
+  "$comment": "Every rendered verdict on this page carries a data-verdict marker, and every marker listed here has been forced false and watched go red. A mutation counts only when the unmutated baseline passed in the same run, the failure was that marker's OWN assertion, and the run served the mutated bundle (CI=1, port 4684, no reused server). e2e/verdicts.spec.ts fails on any rendered marker missing from this file. Every branch that writes a marker has its own mutation: markers with more than one code path carry more than one entry, because covering the marker is not the same as covering the branch.",
   "markers": {
     "dleq": {
       "renders": "#dleq \u2014 whether the client accepted the issuer's DLEQ proof under the key it was told to trust",
@@ -10,6 +10,13 @@
           "mutation": "replace the body with `return true`",
           "kills": "e2e/claims.spec.ts:55 expect(getByText('DLEQ PROOF \u00b7 REJECTED AS DESIGNED')).toBeVisible()",
           "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 24188700e77fb6978d541f39da7a564f 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('DLEQ PROOF \u00b7 REJECTED AS DESIGNED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:55. The unpublished-key mode stopped aborting and rendered 'DLEQ PROOF \u00b7 ACCEPTED AN UNPUBLISHED KEY' instead."
+        },
+        {
+          "id": "M8",
+          "source": "src/main.ts issue(), partitioned branch",
+          "mutation": "hand Alice `{ verifyKey: bobIssuer.publicKey }` so the key she was told to trust is not the key that answered her",
+          "kills": "e2e/claims.spec.ts:42 expect(getByText('DLEQ PROOFS \u00b7 BOTH VERIFIED')).toBeVisible()",
+          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 33a27c733002186d3cdfa8f86e05c684 2 failed / 13 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('DLEQ PROOFS \u00b7 BOTH VERIFIED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:42. The second failure is collateral, not a second finding: e2e/a11y.spec.ts:31 walks the partition fixture and clicks '2. Redeem at origin' unconditionally, and the abort leaves that button disabled, so it times out. M1 could not reach this path -- it forces DLEQ verification to accept, which leaves 'BOTH VERIFIED' standing."
         }
       ]
     },
@@ -22,6 +29,13 @@
           "mutation": "delete `this.spent.add(nonceId)` so a redeemed nonce is never recorded",
           "kills": "e2e/claims.spec.ts:71 expect(getByText('REDEMPTION \u00b7 REFUSED')).toBeVisible()",
           "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 59ad1baad792f0fa4ea5d6ce035b3b7d 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('REDEMPTION \u00b7 REFUSED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:71. The replay was accepted, so the verdict read 'REDEMPTION \u00b7 VERIFIED'."
+        },
+        {
+          "id": "M7",
+          "source": "src/main.ts redeem(), partitioned branch",
+          "mutation": "append `&& false` to `results.every(({ result }) => result.ok)`",
+          "kills": "e2e/claims.spec.ts:44 expect(getByText('REDEMPTIONS \u00b7 BOTH VERIFIED')).toBeVisible()",
+          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 71536436e0550d3dfd5d8eefa8c8affb 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('REDEMPTIONS \u00b7 BOTH VERIFIED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:44. M2 only reached the single-token redemption path; this is the second path that writes the same marker."
         }
       ]
     },
@@ -34,6 +48,13 @@
           "mutation": "replace the body with `false`",
           "kills": "e2e/claims.spec.ts:33 expect(getByText('COLLUSION CHECK \u00b7 LINKED: BLINDING WAS REMOVED')).toBeVisible()",
           "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 4574d9d034eb2f622c13b720e4481541 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('COLLUSION CHECK \u00b7 LINKED: BLINDING WAS REMOVED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:33. With blinding removed the page still claimed 'NO COMPUTABLE MATCH'."
+        },
+        {
+          "id": "M9",
+          "source": "src/main.ts link(), partitioned branch",
+          "mutation": "truncate the key id to the empty string so both clients fall into one bucket",
+          "kills": "e2e/claims.spec.ts:46 expect(getByText('PROOFS VERIFIED \u00b7 AND PARTITIONED')).toBeVisible()",
+          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 92932d73ffb3fc863809adadc7c0226b 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('PROOFS VERIFIED \u00b7 AND PARTITIONED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:46. M3 only reached the single-token linkability path."
         }
       ]
     },
