@@ -61,7 +61,7 @@ jobs:
       actions: write
     steps:
       - id: meta
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@v3
       - name: Merge green dependency update and dispatch deployment
         run: |
           for attempt in 1 2 3; do
