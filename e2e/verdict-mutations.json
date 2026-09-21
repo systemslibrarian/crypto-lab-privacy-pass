@@ -8,8 +8,8 @@
           "id": "M1",
           "source": "src/oprf/voprf.ts verifyDleqBatch",
           "mutation": "replace the body with `return true`",
-          "kills": "e2e/claims.spec.ts:57 expect(getByText('DLEQ PROOF \u00b7 REJECTED AS DESIGNED')).toBeVisible()",
-          "observed": "1 failed / 12 passed: the unpublished-key mode stopped aborting and rendered 'DLEQ PROOF \u00b7 ACCEPTED AN UNPUBLISHED KEY'"
+          "kills": "e2e/claims.spec.ts:55 expect(getByText('DLEQ PROOF \u00b7 REJECTED AS DESIGNED')).toBeVisible()",
+          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 24188700e77fb6978d541f39da7a564f 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('DLEQ PROOF \u00b7 REJECTED AS DESIGNED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:55. The unpublished-key mode stopped aborting and rendered 'DLEQ PROOF \u00b7 ACCEPTED AN UNPUBLISHED KEY' instead."
         }
       ]
     },
@@ -20,8 +20,8 @@
           "id": "M2",
           "source": "src/pass/privacy-pass.ts Origin.redeem",
           "mutation": "delete `this.spent.add(nonceId)` so a redeemed nonce is never recorded",
-          "kills": "e2e/claims.spec.ts:70 expect(getByText('REDEMPTION \u00b7 REFUSED')).toBeVisible()",
-          "observed": "2 failed / 11 passed: the replay was accepted, so the verdict read 'REDEMPTION \u00b7 VERIFIED' and the integrity oracle painted it alarm"
+          "kills": "e2e/claims.spec.ts:71 expect(getByText('REDEMPTION \u00b7 REFUSED')).toBeVisible()",
+          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 59ad1baad792f0fa4ea5d6ce035b3b7d 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('REDEMPTION \u00b7 REFUSED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:71. The replay was accepted, so the verdict read 'REDEMPTION \u00b7 VERIFIED'."
         }
       ]
     },
@@ -32,8 +32,8 @@
           "id": "M3",
           "source": "src/pass/privacy-pass.ts issuerCanLink",
           "mutation": "replace the body with `false`",
-          "kills": "e2e/claims.spec.ts:36 expect(getByText('COLLUSION CHECK \u00b7 LINKED: BLINDING WAS REMOVED')).toBeVisible()",
-          "observed": "1 failed / 12 passed: with blinding removed the page still claimed 'NO COMPUTABLE MATCH'"
+          "kills": "e2e/claims.spec.ts:33 expect(getByText('COLLUSION CHECK \u00b7 LINKED: BLINDING WAS REMOVED')).toBeVisible()",
+          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 4574d9d034eb2f622c13b720e4481541 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('COLLUSION CHECK \u00b7 LINKED: BLINDING WAS REMOVED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:33. With blinding removed the page still claimed 'NO COMPUTABLE MATCH'."
         }
       ]
     },
@@ -44,8 +44,8 @@
           "id": "M4",
           "source": "src/main.ts linkDiagram",
           "mutation": "ignore the computed count and always emit a single line (`length: 1`)",
-          "kills": "e2e/claims.spec.ts:49 expect(locator('#link-map .computed-link')).toHaveCount(2)",
-          "observed": "1 failed / 12 passed: the partition fixture drew one line for two partitioned buckets"
+          "kills": "e2e/claims.spec.ts:47 expect(locator('#link-map .computed-link')).toHaveCount(2)",
+          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated c10d4b8452abd659cee30954b6ac3302 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toHaveCount(expected) failed / Locator: locator('#link-map .computed-link') / Expected: 2 / Received: 1\" at claims.spec.ts:47. Two partitioned buckets drew one line."
         }
       ]
     },
@@ -56,8 +56,8 @@
           "id": "M5",
           "source": "src/main.ts status()",
           "mutation": "ignore the integrity flag and always write `status good`",
-          "kills": "e2e/claims.spec.ts:37 expect(locator('[data-verdict=\"status\"]')).toHaveClass(/alarm/)",
-          "observed": "1 failed / 12 passed: the unblinded link alarm was reported in the pass colour"
+          "kills": "e2e/claims.spec.ts:34 expect(locator('[data-verdict=\"status\"]')).toHaveClass(/alarm/)",
+          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 34a8e727f2c49f9dc50299de6d26459a 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toHaveClass(expected) failed / Expected pattern: /alarm/ / Received string: \\\"status good\\\"\" at claims.spec.ts:34, resolving to <p id=\"status\" class=\"status good\">ALARM: issuer hash-to-group value equals the orig...</p> \u2014 the alarm was reported in the pass colour."
         }
       ]
     },
@@ -68,8 +68,8 @@
           "id": "M6",
           "source": "src/main.ts issue(), partitioned branch",
           "mutation": "drop the `$('#negative-claim').removeAttribute('hidden')` call so the fixture renders without its limitation",
-          "kills": "e2e/claims.spec.ts:47 expect(locator('#negative-claim')).toBeVisible()",
-          "observed": "TBD"
+          "kills": "e2e/claims.spec.ts:48 expect(locator('#negative-claim')).toBeVisible()",
+          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 2c2c131cefe2a87abe3887d9c50536f2 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: locator('#negative-claim') / Expected: visible / Received: hidden\" at claims.spec.ts:48. The partition fixture rendered every verdict green with its \u00a74.1d limitation absent."
         }
       ]
     }
