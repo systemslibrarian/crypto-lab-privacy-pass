@@ -27,6 +27,19 @@
   margin: 1.3rem 0;
 }
 
+/* The map is a verdict marker, so its own outcome has to be visible on the marker itself and not
+   only in the lines it draws: e2e/expect-verdict.ts asserts text, data-result AND palette. The
+   specificity here is deliberate — .link-map above would otherwise beat the shared .good/.alarm. */
+.link-map.good {
+  border-color: var(--good);
+  color: var(--good);
+}
+
+.link-map.alarm {
+  border-color: var(--alarm);
+  color: var(--alarm);
+}
+
 .link-map svg {
   display: block;
   width: 100%;
