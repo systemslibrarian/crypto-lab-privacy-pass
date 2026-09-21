@@ -38,8 +38,26 @@ jobs:
         with:
           path: dist
 
+  # Split out of `build` on purpose. Auto-merge waits only on REQUIRED checks and a direct push
+  # to main skips PR checks entirely, so verdict coverage needs its own named check to require,
+  # and `deploy` below needs it so a green build alone cannot ship an unmutated verdict.
+  verdict-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Every rendered verdict is marked and mutation-covered
+        run: npx playwright test e2e/verdicts.spec.ts
+
   deploy:
-    needs: build
+    needs: [build, verdict-coverage]
     if: github.event_name != 'pull_request'
     environment:
       name: github-pages
@@ -51,7 +69,7 @@ jobs:
         uses: actions/deploy-pages@v5
 
   dependabot-auto-merge:
-    needs: build
+    needs: [build, verdict-coverage]
     if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 15

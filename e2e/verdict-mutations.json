@@ -1,0 +1,77 @@
+{
+  "$comment": "Every rendered verdict on this page carries a data-verdict marker, and every marker listed here has been forced false and watched go red. A mutation counts only when the unmutated baseline passed in the same run, the failure was that marker's OWN assertion, and the run served the mutated bundle (CI=1, port 4684, no reused server). e2e/verdicts.spec.ts fails on any rendered marker missing from this file.",
+  "markers": {
+    "dleq": {
+      "renders": "#dleq \u2014 whether the client accepted the issuer's DLEQ proof under the key it was told to trust",
+      "mutations": [
+        {
+          "id": "M1",
+          "source": "src/oprf/voprf.ts verifyDleqBatch",
+          "mutation": "replace the body with `return true`",
+          "kills": "e2e/claims.spec.ts:57 expect(getByText('DLEQ PROOF \u00b7 REJECTED AS DESIGNED')).toBeVisible()",
+          "observed": "1 failed / 12 passed: the unpublished-key mode stopped aborting and rendered 'DLEQ PROOF \u00b7 ACCEPTED AN UNPUBLISHED KEY'"
+        }
+      ]
+    },
+    "redemption": {
+      "renders": "#redeem-verdict \u2014 whether the origin accepted or refused the token presented to it",
+      "mutations": [
+        {
+          "id": "M2",
+          "source": "src/pass/privacy-pass.ts Origin.redeem",
+          "mutation": "delete `this.spent.add(nonceId)` so a redeemed nonce is never recorded",
+          "kills": "e2e/claims.spec.ts:70 expect(getByText('REDEMPTION \u00b7 REFUSED')).toBeVisible()",
+          "observed": "2 failed / 11 passed: the replay was accepted, so the verdict read 'REDEMPTION \u00b7 VERIFIED' and the integrity oracle painted it alarm"
+        }
+      ]
+    },
+    "linkage": {
+      "renders": "#link-verdict \u2014 whether pooling the issuer and origin ledgers yields an equality-testable match",
+      "mutations": [
+        {
+          "id": "M3",
+          "source": "src/pass/privacy-pass.ts issuerCanLink",
+          "mutation": "replace the body with `false`",
+          "kills": "e2e/claims.spec.ts:36 expect(getByText('COLLUSION CHECK \u00b7 LINKED: BLINDING WAS REMOVED')).toBeVisible()",
+          "observed": "1 failed / 12 passed: with blinding removed the page still claimed 'NO COMPUTABLE MATCH'"
+        }
+      ]
+    },
+    "link-map": {
+      "renders": "#link-map \u2014 the drawn lines, one per computable link across the two ledgers",
+      "mutations": [
+        {
+          "id": "M4",
+          "source": "src/main.ts linkDiagram",
+          "mutation": "ignore the computed count and always emit a single line (`length: 1`)",
+          "kills": "e2e/claims.spec.ts:49 expect(locator('#link-map .computed-link')).toHaveCount(2)",
+          "observed": "1 failed / 12 passed: the partition fixture drew one line for two partitioned buckets"
+        }
+      ]
+    },
+    "status": {
+      "renders": "#status \u2014 the live-region summary, whose good/alarm colour tracks whether protocol integrity held",
+      "mutations": [
+        {
+          "id": "M5",
+          "source": "src/main.ts status()",
+          "mutation": "ignore the integrity flag and always write `status good`",
+          "kills": "e2e/claims.spec.ts:37 expect(locator('[data-verdict=\"status\"]')).toHaveClass(/alarm/)",
+          "observed": "1 failed / 12 passed: the unblinded link alarm was reported in the pass colour"
+        }
+      ]
+    },
+    "negative-claim": {
+      "renders": "#negative-claim \u2014 the \u00a74.1d limitation, shown in the alarm palette only in the fixture that violates it",
+      "mutations": [
+        {
+          "id": "M6",
+          "source": "src/main.ts issue(), partitioned branch",
+          "mutation": "drop the `$('#negative-claim').removeAttribute('hidden')` call so the fixture renders without its limitation",
+          "kills": "e2e/claims.spec.ts:47 expect(locator('#negative-claim')).toBeVisible()",
+          "observed": "TBD"
+        }
+      ]
+    }
+  }
+}

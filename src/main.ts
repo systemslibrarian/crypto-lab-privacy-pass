@@ -10,15 +10,16 @@ let issuance: Issuance | undefined
 let partitioned: Array<{ client: string; issuer: Issuer; issuance: Issuance; origin: Origin }> = []
 let skipped: { issuance: Issuance; verdict: { ok: boolean; reason: string } } | undefined
 let mode: 'private' | 'unblinded' | 'partitioned' | 'substituted' = 'private'
+let redemptions = 0
 
 const $ = <T extends Element>(selector: string): T => document.querySelector<T>(selector)!
 const short = (value: Uint8Array | string, length = 18): string => {
   const source = typeof value === 'string' ? value : hex(value)
   return `${source.slice(0, length)}...${source.slice(-8)}`
 }
-const status = (text: string, good = true): void => {
+const status = (text: string, intact = true): void => {
   $('#status').textContent = text
-  $('#status').className = `status ${good ? 'good' : 'alarm'}`
+  $('#status').className = `status ${intact ? 'good' : 'alarm'}`
 }
 
 function render(): void {
@@ -28,13 +29,13 @@ function render(): void {
       <aside class="cl-hero-why" aria-label="Why it matters"><span class="cl-hero-why-label">WHY IT MATTERS</span><p class="cl-hero-why-text">This is the token behind CAPTCHA-free anti-bot and rate-limit checks that need a signal without needing an identity. Remove the blinding and the wire format stays familiar, but the privacy guarantee disappears.</p></aside>
     </header>
     <section class="intro" aria-labelledby="what-title"><p class="eyebrow">WHAT YOU ARE WATCHING</p><h2 id="what-title">A receipt with no name on it</h2><p>An issuer vouches that it evaluated one request. An origin can verify the resulting token, but a correctly blinded request gives the issuer nothing it can match to that redemption. All three roles below run locally in this browser session; no request leaves this page.</p></section>
-    <section class="controls" aria-label="Experiment controls"><fieldset><legend>Experiment mode</legend><label><input type="radio" name="mode" value="private" checked> Private issuance</label><label><input type="radio" name="mode" value="unblinded"> <strong>BROKEN:</strong> remove blinding</label><label><input type="radio" name="mode" value="partitioned"> <strong>BROKEN:</strong> per-client published key</label><label><input type="radio" name="mode" value="substituted"> <strong>BROKEN:</strong> unpublished issuer key</label></fieldset><div class="command-row"><button id="issue" type="button">1. Issue token</button><button id="redeem" type="button" disabled>2. Redeem at origin</button><button id="link" type="button" disabled>3. Try to link ledgers</button><button id="replay" type="button" disabled>Replay token</button></div><p id="status" class="status" role="status" aria-live="polite">Ready. Issue a token to begin.</p></section>
+    <section class="controls" aria-label="Experiment controls"><fieldset><legend>Experiment mode</legend><label><input type="radio" name="mode" value="private" checked> Private issuance</label><label><input type="radio" name="mode" value="unblinded"> <strong>BROKEN:</strong> remove blinding</label><label><input type="radio" name="mode" value="partitioned"> <strong>BROKEN:</strong> per-client published key</label><label><input type="radio" name="mode" value="substituted"> <strong>BROKEN:</strong> unpublished issuer key</label></fieldset><div class="command-row"><button id="issue" type="button">1. Issue token</button><button id="redeem" type="button" disabled>2. Redeem at origin</button><button id="link" type="button" disabled>3. Try to link ledgers</button><button id="replay" type="button" disabled>Replay token</button></div><p id="status" class="status" data-verdict="status" role="status" aria-live="polite">Ready. Issue a token to begin.</p></section>
     <section class="flow" aria-label="Protocol flow"><article><span class="step">01</span><h2>Client blinds</h2><p id="client-detail">The nonce and challenge become an input point, multiplied by a fresh secret blind.</p></article><article><span class="step">02</span><h2>Issuer proves</h2><p id="issuer-detail">It sees only a blinded point and returns an evaluation with a DLEQ proof.</p></article><article><span class="step">03</span><h2>Origin redeems</h2><p id="origin-detail">It privately re-evaluates the token input and records the nonce once.</p></article></section>
     <section class="ledgers" aria-label="Role ledgers"><article class="ledger"><div class="ledger-head"><p class="eyebrow">ISSUER LEDGER</p><span>What it received</span></div><div id="issuer-ledger" class="ledger-body" role="region" tabindex="0" aria-label="Issuer ledger"><p class="empty">No issuance yet.</p></div></article><article class="ledger"><div class="ledger-head"><p class="eyebrow">ORIGIN LEDGER</p><span>What it verified</span></div><div id="origin-ledger" class="ledger-body" role="region" tabindex="0" aria-label="Origin ledger"><p class="empty">No redemption yet.</p></div></article></section>
-    <div id="link-map" class="link-map" role="img" aria-label="No ledger comparison has run"><p>Run “Try to link ledgers” to compare the values both parties hold.</p></div>
-    <section class="verdicts" aria-label="Protocol verdicts"><div id="dleq" class="verdict neutral">DLEQ PROOF · waiting</div><div id="redeem-verdict" class="verdict neutral">REDEMPTION · waiting</div><div id="link-verdict" class="verdict neutral">COLLUSION CHECK · waiting</div></section>
-    <p id="negative-claim" class="negative-claim" hidden>The DLEQ proof shows the issuer used the key it published to this client; it does not show it published the same key to every client. Key consistency is outside RFC 9578 and outside this page.</p>
-    <details><summary>Inspect the real wire values and scope</summary><dl><dt>Official known-answer tests</dt><dd id="kat-count">8 vectors: 3 RFC 9497 P-384 VOPRF + 5 RFC 9578 type-0x0001 issuance</dd><dt>Published P-384 key</dt><dd id="pk">${hex(pointBytes(issuer.publicKey))}</dd><dt>RFC 9578 token key id</dt><dd id="key-id">${hex(keyId(issuer.publicKey))}</dd><dt>TokenRequest · 52 bytes</dt><dd id="wire-request">Issue a token to populate.</dd><dt>TokenResponse · 145 bytes</dt><dd id="wire-response">Issue a token to populate.</dd><dt>Token · 146 bytes</dt><dd id="wire-token">Issue a token to populate.</dd><dt>What this is not</dt><dd>No HTTP transport, attester, rate-limit model, key-consistency protocol, batched issuance, or Blind RSA implementation is included. This is not production crypto.</dd></dl></details>
+    <div id="link-map" class="link-map" data-verdict="link-map" role="img" aria-label="No ledger comparison has run"><p>Run “Try to link ledgers” to compare the values both parties hold.</p></div>
+    <section class="verdicts" aria-label="Protocol verdicts"><div id="dleq" class="verdict neutral" data-verdict="dleq">DLEQ PROOF · waiting</div><div id="redeem-verdict" class="verdict neutral" data-verdict="redemption">REDEMPTION · waiting</div><div id="link-verdict" class="verdict neutral" data-verdict="linkage">COLLUSION CHECK · waiting</div></section>
+    <p id="negative-claim" class="negative-claim" data-verdict="negative-claim" hidden>The DLEQ proof shows the issuer used the key it published to this client; it does not show it published the same key to every client. Key consistency is outside RFC 9578 and outside this page.</p>
+    <details><summary>Inspect the real wire values and scope</summary><dl><dt>Official known-answer tests</dt><dd id="kat-count">${__RFC9497_VECTOR_COUNT__ + __RFC9578_VECTOR_COUNT__} vectors: ${__RFC9497_VECTOR_COUNT__} RFC 9497 P-384 VOPRF + ${__RFC9578_VECTOR_COUNT__} RFC 9578 type-0x0001 issuance</dd><dt>Published P-384 key</dt><dd id="pk">${hex(pointBytes(issuer.publicKey))}</dd><dt>RFC 9578 token key id</dt><dd id="key-id">${hex(keyId(issuer.publicKey))}</dd><dt>TokenRequest · 52 bytes</dt><dd id="wire-request">Issue a token to populate.</dd><dt>TokenResponse · 145 bytes</dt><dd id="wire-response">Issue a token to populate.</dd><dt>Token · 146 bytes</dt><dd id="wire-token">Issue a token to populate.</dd><dt>What this is not</dt><dd>No HTTP transport, attester, rate-limit model, key-consistency protocol, batched issuance, or Blind RSA implementation is included. This is not production crypto.</dd></dl></details>
     <section class="comparison"><h2>Type 0x0001 is not type 0x0002</h2><p>This page implements VOPRF(P-384, SHA-384), whose origin verifies with the issuer secret key. RFC 9474 Blind RSA tokens are publicly verifiable and use a different construction; see the Crypto Lab Blind Sign demo for that comparison.</p></section>
     <footer class="scripture-footer"><p>So whether you eat or drink or whatever you do, do it all for the glory of God. — 1 Corinthians 10:31</p></footer>`
   document.querySelectorAll<HTMLInputElement>('input[name="mode"]').forEach((input) => input.addEventListener('change', () => {
@@ -42,6 +43,7 @@ function render(): void {
     issuance = undefined
     partitioned = []
     skipped = undefined
+    redemptions = 0
     $('#redeem').setAttribute('disabled', '')
     $('#link').setAttribute('disabled', '')
     $('#replay').setAttribute('disabled', '')
@@ -59,6 +61,7 @@ function render(): void {
 }
 
 function issue(): void {
+  redemptions = 0
   try {
     if (mode === 'partitioned') {
       const aliceIssuer = new Issuer(0xaaa111n)
@@ -80,7 +83,7 @@ function issue(): void {
       skipped = { issuance: careless, verdict: new Origin().redeem(careless.token, challenge, issuer) }
       new Client().issue(rogue, challenge, { verifyKey: issuer.publicKey })
       $('#dleq').className = 'verdict alarm'; $('#dleq').textContent = 'DLEQ PROOF · ACCEPTED AN UNPUBLISHED KEY'
-      $('#client-detail').textContent = 'ALARM: the client finalized against a key it was never told to trust.'
+      $('#client-detail').textContent = 'BROKEN: the client finalized against a key it was never told to trust.'
       status('ALARM: DLEQ verification against the published key should have failed and did not.', false)
     } else {
       issuance = new Client().issue(issuer, challenge, { blindScalar: mode === 'unblinded' ? 1n : undefined })
@@ -123,12 +126,18 @@ function redeem(): void {
     return
   }
   if (!issuance) return
+  // The colour tracks integrity, not the return value: a first redemption must be accepted and
+  // every later presentation of the same token must be refused. Both of those are the origin
+  // working, so both render green; the alarm is reserved for the origin disagreeing with that.
+  const expectedOk = redemptions === 0
   const result = origin.redeem(issuance.token, challenge, issuer)
+  redemptions += 1
+  const intact = result.ok === expectedOk
   $('#origin-ledger').innerHTML = `<p><b>${result.ok ? 'Token redeemed' : 'Token refused'}</b></p><code>nonce: ${short(issuance.token.nonce)}</code><code>authenticator: ${short(issuance.token.authenticator)}</code><p>${result.reason}</p>`
   $('#origin-detail').textContent = result.reason
-  $('#redeem-verdict').className = `verdict ${result.ok ? 'good' : 'alarm'}`
+  $('#redeem-verdict').className = `verdict ${intact ? 'good' : 'alarm'}`
   $('#redeem-verdict').textContent = `REDEMPTION · ${result.ok ? 'VERIFIED' : 'REFUSED'}`
-  status(result.reason, result.ok)
+  status(intact ? result.reason : `INTEGRITY ALARM: the origin ${result.ok ? 'accepted' : 'refused'} a presentation it should have ${expectedOk ? 'accepted' : 'refused'}. ${result.reason}`, intact)
 }
 function link(): void {
   if (partitioned.length) {

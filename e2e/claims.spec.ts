@@ -31,6 +31,7 @@ test('removing blinding produces an explicit link alarm', async ({ page }) => {
   const issuerPoint = (await page.locator('#issuer-ledger code').textContent())?.replace(/^blinded element: /, '')
   await page.getByRole('button', { name: '3. Try to link ledgers' }).click()
   await expect(page.getByText('COLLUSION CHECK · LINKED: BLINDING WAS REMOVED')).toBeVisible()
+  await expect(page.locator('[data-verdict="status"]')).toHaveClass(/alarm/)
   await expect(page.locator('#link-map .computed-link')).toHaveCount(1)
   expect(issuerPoint).not.toBe('')
 })
@@ -65,9 +66,15 @@ test('an unpublished issuer key aborts issuance, and the token a careless client
 test('a redeemed token cannot be replayed', async ({ page }) => {
   await page.getByRole('button', { name: '1. Issue token' }).click()
   await page.getByRole('button', { name: '2. Redeem at origin' }).click()
+  await expect(page.locator('[data-verdict="redemption"]')).toHaveClass(/good/)
   await page.getByRole('button', { name: 'Replay token' }).click()
   await expect(page.getByText('REDEMPTION · REFUSED')).toBeVisible()
   await expect(page.locator('#origin-ledger').getByText(/Replay refused/)).toBeVisible()
+  // Colour tracks integrity, not the return value: the origin refusing a second presentation is
+  // the mechanism working, so the refusal is green in both the verdict and the live region.
+  await expect(page.locator('[data-verdict="redemption"]')).toHaveClass(/good/)
+  await expect(page.locator('[data-verdict="redemption"]')).not.toHaveClass(/alarm/)
+  await expect(page.locator('[data-verdict="status"]')).toHaveClass(/good/)
 })
 
 test('mode changes retire stale results while selecting the same mode is a no-op', async ({ page }) => {
