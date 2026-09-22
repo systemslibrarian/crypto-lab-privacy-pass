@@ -80,7 +80,10 @@ the cross-product. Five checks run:
   call in any other test satisfied every record naming that file. Both now fail, because neither
   one runs. A test that did not run at all is also a failure rather than a skip — a check that
   cannot look must not report clean. Two of the recorded mutations (`M10`, `M5`) move only the
-  state and would survive a `toContainText` kill;
+  state and would survive a `toContainText` kill. The pair is per test, so a decoy call on the same
+  marker inside the same test still satisfies it — measured, not assumed, and noted in
+  `e2e/coverage.ts`; what covers that case is re-applying the mutation, which is what the records
+  in `e2e/verdict-mutations.json` are;
 - the killing test may not build its expectation out of the marker it is asserting. Runtime
   observation cannot see this one — a tautological call really does execute — so this rule reads
   the argument's provenance: the claim expression, plus the declaration of every identifier it

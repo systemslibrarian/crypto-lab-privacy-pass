@@ -41,6 +41,15 @@ export function recordedKills(manifest: Manifest): RecordedKill[] {
  * "Did not run" is a failure rather than a skip on purpose. A run that cannot see the killing test
  * cannot say anything about it, and a checker that cannot look must not report clean — the lane's
  * own census rule, one layer down.
+ *
+ * KNOWN LIMIT, measured rather than assumed: the pair is (spec, test, marker), so a SECOND call to
+ * the same marker in the same test satisfies it. A decoy `expectVerdict(page, 'linkage', …)` on the
+ * marker's neutral pre-click state, with the real assertion weakened to text, was run against this
+ * tree on 2026-09-22 and the suite stayed green, 17 passed. Finer granularity would have to pin the
+ * expected VALUE, which turns the rule into a literal pin and goes stale the moment an oracle
+ * derives its expectation instead of typing it — the frozen-prose failure one layer up. What
+ * actually covers that case is the mutation replay itself: every record in
+ * e2e/verdict-mutations.json was re-applied and watched go red on its own marker's assertion.
  */
 export function unobservedKills(manifest: Manifest, observations: Observation[]): string[] {
   const ran = new Set(observations.filter((entry) => entry.kind === 'test').map((entry) => [entry.spec, entry.test].join(KEY)))
