@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs'
-import { expect, test, type Page } from '@playwright/test'
-import { collectVerdicts, MEASUREMENT_PATTERN, phantomMarkers, uncoveredMarkers, VERDICT_WORDS, type Family, type Manifest, type VerdictScan } from './verdict-scan.js'
+import type { Page } from '@playwright/test'
+import { expect, test } from './fixtures.js'
+import { collectVerdicts, MEASUREMENT_PATTERN, phantomMarkers, uncoveredMarkers, VERDICT_WORDS, type Manifest, type VerdictScan } from './verdict-scan.js'
+import { readObservations, type Observation } from './observed.js'
+import { selfReadingKills, unobservedKills } from './coverage.js'
 
 const manifest = JSON.parse(readFileSync(new URL('./verdict-mutations.json', import.meta.url), 'utf8')) as Manifest
 const SCAN_OPTIONS = { words: VERDICT_WORDS, measurement: MEASUREMENT_PATTERN }
@@ -11,6 +14,10 @@ const SCAN_OPTIONS = { words: VERDICT_WORDS, measurement: MEASUREMENT_PATTERN }
 // plus one disclosure is nine visits per pass, not the product of them.
 //
 //   modes        — four radio options, each a different protocol fixture
+//   client roster — three radio options sizing the per-client-key fixture. They are disabled
+//                  outside the mode they parameterise, so they are walked INSIDE that mode; for
+//                  the other three modes the control changes nothing that renders, which is a
+//                  statement about this page rather than a skip taken for convenience
 //   commands     — four buttons, walked in order and skipped while disabled
 //   disclosures  — the wire-values <details>, whose contents do not render at all while it is
 //                  closed, so the entire RFC 9578 wire block — five measurement markers — was
@@ -18,10 +25,10 @@ const SCAN_OPTIONS = { words: VERDICT_WORDS, measurement: MEASUREMENT_PATTERN }
 //
 // Nothing else on the page changes what renders: the ledger bodies are scrollable regions rather
 // than controls, and the topbar and source links navigate away.
-const MODES = [
+const MODES: Array<{ name: string; label: RegExp; clients?: string[] }> = [
   { name: 'private', label: /Private issuance/ },
   { name: 'unblinded', label: /BROKEN: remove blinding/ },
-  { name: 'partitioned', label: /BROKEN: per-client published key/ },
+  { name: 'partitioned', label: /BROKEN: per-client published key/, clients: ['2 clients', '3 clients', '4 clients'] },
   { name: 'substituted', label: /BROKEN: unpublished issuer key/ },
 ]
 const STEPS = ['1. Issue token', '2. Redeem at origin', '3. Try to link ledgers', 'Replay token']
@@ -33,17 +40,24 @@ async function walkEveryState(page: Page, visit: (state: string, scan: VerdictSc
   const driveMode = async (mode: (typeof MODES)[number], prefix: string): Promise<void> => {
     await page.getByLabel(mode.label).check()
     await scan(`${prefix}${mode.name}: selected`)
-    for (const step of STEPS) {
-      const control = page.getByRole('button', { name: step })
-      if (!(await control.isEnabled())) continue
-      await control.click()
-      await scan(`${prefix}${mode.name}: ${step}`)
-    }
-    for (const disclosure of DISCLOSURES) {
-      await page.getByText(disclosure.summary).click()
-      await scan(`${prefix}${mode.name}: ${disclosure.name} open`)
-      await page.getByText(disclosure.summary).click()
-      await scan(`${prefix}${mode.name}: ${disclosure.name} closed`)
+    for (const clients of mode.clients ?? [null]) {
+      if (clients !== null) {
+        await page.getByLabel(clients).check()
+        await scan(`${prefix}${mode.name}: ${clients} selected`)
+      }
+      const at = clients === null ? '' : ` at ${clients}`
+      for (const step of STEPS) {
+        const control = page.getByRole('button', { name: step })
+        if (!(await control.isEnabled())) continue
+        await control.click()
+        await scan(`${prefix}${mode.name}: ${step}${at}`)
+      }
+      for (const disclosure of DISCLOSURES) {
+        await page.getByText(disclosure.summary).click()
+        await scan(`${prefix}${mode.name}: ${disclosure.name} open${at}`)
+        await page.getByText(disclosure.summary).click()
+        await scan(`${prefix}${mode.name}: ${disclosure.name} closed${at}`)
+      }
     }
   }
 
@@ -95,50 +109,86 @@ test('no verdict and no measurement is rendered outside a marker in any reachabl
   expect(measurements, 'a number rendered in a result region outside any [data-verdict] or [data-claim] marker').toEqual([])
 })
 
-// A mention of a marker is not an assertion of it, and a text assertion is not an assertion of its
-// STATE. Every original kill in this lab was recorded from `getByText(...)` alone, so a mutation
-// that flipped the words while leaving the pass styling behind would have been counted as
-// evidence. Every mutation now names the test that killed it, and that test has to assert the
-// marker through the shared helper, which asserts text, data-result and painted palette together.
-test('every recorded kill goes through the helper that asserts text and state together', () => {
+// A mention of a marker is not an assertion of it, and this test used to enforce a MENTION.
+// It read the killing test's source and asked whether the string `expectVerdict(page, '<marker>'`
+// appeared inside it, which three different edits satisfy while asserting nothing: comment the
+// call out, move it to a different test in the same file, or keep it and feed it values read off
+// the marker it is asserting. The first two are answered here by evidence from the run itself —
+// the helpers record every (spec, test, marker) pair they EXECUTE, and this test reads that sink
+// back. The third is a question about the argument rather than the call, and is answered by the
+// provenance rule below it.
+//
+// Playwright runs tests in worker processes, so the sink is files under test-results/ rather than
+// a module-level Set, it is cleared in e2e/global-setup.ts before the first test, and this file
+// runs in its own `verdict-coverage` project whose `dependencies:` make it run last. That is also
+// why a file filter cannot hollow it out: a dependency project runs its whole file list, so
+// `npx playwright test e2e/verdicts.spec.ts` — the command the CI job of the same name runs —
+// still runs e2e/claims.spec.ts first and still judges it.
+test('every recorded kill was EXECUTED at runtime on the marker it names', async ({ page }) => {
   const helperSource = readFileSync(new URL('./expect-verdict.ts', import.meta.url), 'utf8')
   expect(helperSource, 'the shared helper must assert the state attribute, not only the words').toContain("toHaveAttribute('data-result'")
   expect(helperSource, 'the shared helper must assert the palette the marker paints itself in').toContain('paintOf')
 
+  const observations = readObservations()
+  expect(observations.filter((entry) => entry.kind === 'assert'), 'the run recorded no helper call at all, so nothing below could have been observed').not.toEqual([])
+  expect(unobservedKills(manifest, observations), 'recorded mutations whose killing test never executed the helper against the marker it names').toEqual([])
+
+  // The provenance rule needs to know what "reading this marker" looks like, and that list is
+  // DISCOVERED from the rendered page — the marker's own attribute selector plus every id on it
+  // or an ancestor of it — rather than typed into the rule, where it would go stale exactly when
+  // the page changed.
+  const ids: Record<'markers' | 'claims', Map<string, Set<string>>> = { markers: new Map(), claims: new Map() }
+  await walkEveryState(page, (_state, scan) => {
+    for (const [family, entries] of [['markers', scan.markerIds], ['claims', scan.claimIds]] as const) {
+      for (const [marker, path] of entries) {
+        const known = ids[family].get(marker) ?? new Set<string>()
+        path.forEach((id) => known.add(id))
+        ids[family].set(marker, known)
+      }
+    }
+  })
+  const attributeOf = { markers: 'data-verdict', claims: 'data-claim' }
   const sources = new Map<string, string>()
   const sourceOf = (spec: string): string => {
     if (!sources.has(spec)) sources.set(spec, readFileSync(new URL(`../${spec}`, import.meta.url), 'utf8'))
     return sources.get(spec) as string
   }
-  const bodyOfTest = (source: string, title: string): string | null => {
-    const start = source.indexOf(`test('${title}'`)
-    if (start === -1) return null
-    const next = source.indexOf('\ntest(', start + 1)
-    return source.slice(start, next === -1 ? source.length : next)
-  }
+  expect(
+    selfReadingKills(manifest, sourceOf, (family, marker) => [`[${attributeOf[family]}="${marker}"]`, `'${marker}'`, ...(ids[family].get(marker) ?? [])]),
+    'recorded mutations whose killing test builds its expectation out of the marker it is asserting, which no mutation of that marker can falsify',
+  ).toEqual([])
+})
 
-  const problems: string[] = []
-  const families: Array<[Family, string]> = [[manifest.markers, 'expectVerdict'], [manifest.claims, 'expectClaim']]
-  for (const [entries, helper] of families) {
-    for (const [marker, entry] of Object.entries(entries)) {
-      for (const mutation of entry.mutations) {
-        const killedBy = mutation.killedBy
-        if (!killedBy?.spec || !killedBy?.test) {
-          problems.push(`${marker}/${mutation.id}: no killedBy { spec, test } recorded`)
-          continue
-        }
-        const body = bodyOfTest(sourceOf(killedBy.spec), killedBy.test)
-        if (body === null) {
-          problems.push(`${marker}/${mutation.id}: ${killedBy.spec} has no test named "${killedBy.test}"`)
-          continue
-        }
-        if (!new RegExp(`${helper}\\(page, '${marker}'`).test(body)) {
-          problems.push(`${marker}/${mutation.id}: "${killedBy.test}" never calls ${helper}(page, '${marker}', …), so the recorded kill proves the words alone`)
-        }
-      }
-    }
-  }
-  expect(problems, 'recorded mutations whose killing test does not assert the marker through the shared text-and-state helper').toEqual([])
+// The three escapes, permanently. Each one was demonstrated against this lab by an auditor and
+// each is replayed here against the rules themselves, so "it bites" is a check that re-runs rather
+// than a transcript from the day it was written.
+test('the coverage rules bite: a commented-out call, a call in another test, and an expectation read off the marker itself', () => {
+  const spec = 'e2e/claims.spec.ts'
+  const title = 'the killing test'
+  const fixture = {
+    markers: { linkage: { renders: 'the collusion check', mutations: [{ id: 'F1', source: '', mutation: '', killedBy: { spec, test: title }, observed: '' }] } },
+    claims: {},
+  } as unknown as Manifest
+  const ran: Observation = { kind: 'test', spec, test: title }
+  const executed: Observation = { kind: 'assert', spec, test: title, family: 'markers', helper: 'expectVerdict', marker: 'linkage' }
+
+  expect(unobservedKills(fixture, [ran, executed]), 'a pair that really ran is the clean case').toEqual([])
+  expect(unobservedKills(fixture, [ran]).join(' '), 'commented out: the test ran, the assertion did not').toContain('ran without ever executing')
+  expect(unobservedKills(fixture, [ran, { ...executed, test: 'some other test in the same file' }]).join(' '), 'satisfied from elsewhere in the file: the pair is per test, not per file').toContain('ran without ever executing')
+  expect(unobservedKills(fixture, [executed]).join(' '), 'a killing test that did not run cannot be judged, and is not clean').toContain('did not run in this session')
+
+  const reads = (): string[] => ['[data-verdict="linkage"]', "'linkage'", '#link-verdict', '#app']
+  const tautological = `test('${title}', async ({ page }) => {
+    const shown = page.locator('[data-verdict="linkage"]')
+    await expectVerdict(page, 'linkage', { text: (await shown.textContent()) ?? '', result: 'alarm' })
+  })`
+  const crossChecked = `test('${title}', async ({ page }) => {
+    const ledgerKeys = await page.locator('#origin-ledger code').allTextContents()
+    await expectVerdict(page, 'linkage', { text: 'COLLUSION CHECK · LINKED: BLINDING WAS REMOVED', result: 'alarm' })
+    expect(ledgerKeys).not.toEqual([])
+  })`
+  expect(selfReadingKills(fixture, () => tautological, reads).join(' '), 'an expectation read off the marker under assertion').toContain('builds its expectation from')
+  expect(selfReadingKills(fixture, () => crossChecked, reads), 'reading a DIFFERENT region is how the honest oracles here work and must stay legal').toEqual([])
 })
 
 test('the coverage checks bite: an unmarked banner, an unmarked number and an unregistered marker are all caught', async ({ page }) => {

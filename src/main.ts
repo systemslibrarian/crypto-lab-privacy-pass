@@ -12,6 +12,20 @@ let skipped: { issuance: Issuance; verdict: { ok: boolean; reason: string } } | 
 let mode: 'private' | 'unblinded' | 'partitioned' | 'substituted' = 'private'
 let redemptions = 0
 
+// The per-client-key fixture used to be two clients, hard-coded, with no way to run it at any
+// other size. "One drawn link per partition" is not falsifiable at a single size: a literal 2 in
+// the diagram call and a measured bucket count are the same number in every run the page could
+// reach, so the claim beside the number said more than the page could show. The roster is a list
+// and the size is a control, so the two readings separate.
+const PARTITION_ROSTER = [
+  { client: 'Alice', secret: 0xaaa111n },
+  { client: 'Bob', secret: 0xbbb222n },
+  { client: 'Carol', secret: 0xccc333n },
+  { client: 'Dave', secret: 0xddd444n },
+]
+const CLIENT_COUNTS = [2, 3, 4]
+let clientCount = 2
+
 const $ = <T extends Element>(selector: string): T => document.querySelector<T>(selector)!
 const short = (value: Uint8Array | string, length = 18): string => {
   const source = typeof value === 'string' ? value : hex(value)
@@ -53,7 +67,7 @@ function render(): void {
       <aside class="cl-hero-why" aria-label="Why it matters"><span class="cl-hero-why-label">WHY IT MATTERS</span><p class="cl-hero-why-text">This is the token behind CAPTCHA-free anti-bot and rate-limit checks that need a signal without needing an identity. Remove the blinding and the wire format stays familiar, but the privacy guarantee disappears.</p></aside>
     </header>
     <section class="intro" aria-labelledby="what-title"><p class="eyebrow">WHAT YOU ARE WATCHING</p><h2 id="what-title">A receipt with no name on it</h2><p>An issuer vouches that it evaluated one request. An origin can verify the resulting token, but a correctly blinded request gives the issuer nothing it can match to that redemption. All three roles below run locally in this browser session; no request leaves this page.</p></section>
-    <section class="controls" aria-label="Experiment controls"><fieldset><legend>Experiment mode</legend><label><input type="radio" name="mode" value="private" checked> Private issuance</label><label><input type="radio" name="mode" value="unblinded"> <strong>BROKEN:</strong> remove blinding</label><label><input type="radio" name="mode" value="partitioned"> <strong>BROKEN:</strong> per-client published key</label><label><input type="radio" name="mode" value="substituted"> <strong>BROKEN:</strong> unpublished issuer key</label></fieldset><div class="command-row"><button id="issue" type="button">1. Issue token</button><button id="redeem" type="button" disabled>2. Redeem at origin</button><button id="link" type="button" disabled>3. Try to link ledgers</button><button id="replay" type="button" disabled>Replay token</button></div><p id="status" class="status neutral" data-verdict="status" data-result="neutral" role="status" aria-live="polite">Ready. Issue a token to begin.</p></section>
+    <section class="controls" aria-label="Experiment controls"><fieldset><legend>Experiment mode</legend><label><input type="radio" name="mode" value="private" checked> Private issuance</label><label><input type="radio" name="mode" value="unblinded"> <strong>BROKEN:</strong> remove blinding</label><label><input type="radio" name="mode" value="partitioned"> <strong>BROKEN:</strong> per-client published key</label><label><input type="radio" name="mode" value="substituted"> <strong>BROKEN:</strong> unpublished issuer key</label></fieldset><fieldset id="client-roster"><legend>Clients in the per-client-key fixture</legend>${CLIENT_COUNTS.map((count) => `<label><input type="radio" name="clients" value="${count}"${count === clientCount ? ' checked' : ''}${mode === 'partitioned' ? '' : ' disabled'}> ${count} clients</label>`).join('')}</fieldset><div class="command-row"><button id="issue" type="button">1. Issue token</button><button id="redeem" type="button" disabled>2. Redeem at origin</button><button id="link" type="button" disabled>3. Try to link ledgers</button><button id="replay" type="button" disabled>Replay token</button></div><p id="status" class="status neutral" data-verdict="status" data-result="neutral" role="status" aria-live="polite">Ready. Issue a token to begin.</p></section>
     <section class="flow" aria-label="Protocol flow"><article><span class="step">01</span><h2>Client blinds</h2><p id="client-detail" data-result-region="client detail">The nonce and challenge become an input point, multiplied by a fresh secret blind.</p></article><article><span class="step">02</span><h2>Issuer proves</h2><p id="issuer-detail" data-result-region="issuer detail">It sees only a blinded point and returns an evaluation with a DLEQ proof.</p></article><article><span class="step">03</span><h2>Origin redeems</h2><p id="origin-detail" data-result-region="origin detail">It privately re-evaluates the token input and records the nonce once.</p></article></section>
     <section class="ledgers" aria-label="Role ledgers"><article class="ledger"><div class="ledger-head"><p class="eyebrow">ISSUER LEDGER</p><span>What it received</span></div><div id="issuer-ledger" class="ledger-body" data-result-region="issuer ledger" role="region" tabindex="0" aria-label="Issuer ledger"><p class="empty">No issuance yet.</p></div></article><article class="ledger"><div class="ledger-head"><p class="eyebrow">ORIGIN LEDGER</p><span>What it verified</span></div><div id="origin-ledger" class="ledger-body" data-result-region="origin ledger" role="region" tabindex="0" aria-label="Origin ledger"><p class="empty">No redemption yet.</p></div></article></section>
     <div id="link-map" class="link-map neutral" data-verdict="link-map" data-result="neutral" data-result-region="ledger link map" role="img" aria-label="No ledger comparison has run"><p>Run “Try to link ledgers” to compare the values both parties hold.</p></div>
@@ -62,8 +76,9 @@ function render(): void {
     <details><summary>Inspect the real wire values and scope</summary><dl data-result-region="wire values"><dt>Official known-answer tests</dt><dd id="kat-count" data-claim="kat-count" data-value="${katTotal}">${katTotal} vectors: ${__RFC9497_VECTOR_COUNT__} RFC 9497 P-384 VOPRF + ${__RFC9578_VECTOR_COUNT__} RFC 9578 type-0x0001 issuance</dd><dt>Published P-384 key</dt><dd id="pk" data-claim="published-key" data-value="${publishedKey.length}">${publishedKey.text}</dd><dt>RFC 9578 token key id</dt><dd id="key-id" data-claim="key-id" data-value="${tokenKeyId.length}">${tokenKeyId.text}</dd><dt>TokenRequest</dt><dd id="wire-request" data-claim="wire-request" data-value="">Issue a token to populate.</dd><dt>TokenResponse</dt><dd id="wire-response" data-claim="wire-response" data-value="">Issue a token to populate.</dd><dt>Token</dt><dd id="wire-token" data-claim="wire-token" data-value="">Issue a token to populate.</dd><dt>What this is not</dt><dd>No HTTP transport, attester, rate-limit model, key-consistency protocol, batched issuance, or Blind RSA implementation is included. This is not production crypto.</dd></dl></details>
     <section class="comparison"><h2>Type 0x0001 is not type 0x0002</h2><p>This page implements VOPRF(P-384, SHA-384), whose origin verifies with the issuer secret key. RFC 9474 Blind RSA tokens are publicly verifiable and use a different construction; see the Crypto Lab Blind Sign demo for that comparison.</p></section>
     <footer class="scripture-footer"><p>So whether you eat or drink or whatever you do, do it all for the glory of God. — 1 Corinthians 10:31</p></footer>`
-  document.querySelectorAll<HTMLInputElement>('input[name="mode"]').forEach((input) => input.addEventListener('change', () => {
-    mode = input.value as typeof mode
+  // Changing the mode and changing the fixture size retire the same things: a rendered verdict
+  // describes the run that produced it, so it may not outlive the parameters of that run.
+  const retire = (message: string): void => {
     issuance = undefined
     partitioned = []
     skipped = undefined
@@ -77,7 +92,16 @@ function render(): void {
     setVerdict('#link-map', 'link-map', 'neutral')
     $('#link-map').setAttribute('aria-label', 'Prior ledger link result retired')
     $('#negative-claim').setAttribute('hidden', '')
-    status('Prior result retired. Issue a new token for this mode.')
+    status(message)
+  }
+  document.querySelectorAll<HTMLInputElement>('input[name="mode"]').forEach((input) => input.addEventListener('change', () => {
+    mode = input.value as typeof mode
+    document.querySelectorAll<HTMLInputElement>('input[name="clients"]').forEach((radio) => { radio.disabled = mode !== 'partitioned' })
+    retire('Prior result retired. Issue a new token for this mode.')
+  }))
+  document.querySelectorAll<HTMLInputElement>('input[name="clients"]').forEach((input) => input.addEventListener('change', () => {
+    clientCount = Number(input.value)
+    retire(`Prior result retired. The fixture will publish a different key to each of ${clientCount} clients.`)
   }))
   $('#issue').addEventListener('click', issue)
   $('#redeem').addEventListener('click', redeem)
@@ -89,19 +113,17 @@ function issue(): void {
   redemptions = 0
   try {
     if (mode === 'partitioned') {
-      const aliceIssuer = new Issuer(0xaaa111n)
-      const bobIssuer = new Issuer(0xbbb222n)
-      partitioned = [
-        { client: 'Alice', issuer: aliceIssuer, issuance: new Client().issue(aliceIssuer, challenge), origin: new Origin() },
-        { client: 'Bob', issuer: bobIssuer, issuance: new Client().issue(bobIssuer, challenge), origin: new Origin() },
-      ]
+      partitioned = PARTITION_ROSTER.slice(0, clientCount).map(({ client, secret }) => {
+        const clientIssuer = new Issuer(secret)
+        return { client, issuer: clientIssuer, issuance: new Client().issue(clientIssuer, challenge), origin: new Origin() }
+      })
       $('#issuer-ledger').innerHTML = partitioned.map(({ client, issuer: clientIssuer }) => `<p><b>${client}</b> · proof verified</p><code>published key id: ${short(keyId(clientIssuer.publicKey))}</code>`).join('')
-      $('#client-detail').textContent = 'Alice and Bob each receive a valid proof under the different key published to them.'
-      $('#issuer-detail').textContent = 'BROKEN: the issuer partitions clients with two valid keys; neither client sees the inconsistency.'
-      setVerdict('#dleq', 'verdict', 'good', 'DLEQ PROOFS · BOTH VERIFIED')
+      $('#client-detail').textContent = 'Every client receives a valid proof under the different key published to it.'
+      $('#issuer-detail').textContent = 'BROKEN: the issuer partitions clients with one valid key each; no client sees the inconsistency.'
+      setVerdict('#dleq', 'verdict', 'good', 'DLEQ PROOFS · ALL VERIFIED')
       $('#negative-claim').removeAttribute('hidden')
       $('#redeem').removeAttribute('disabled'); $('#link').removeAttribute('disabled'); $('#replay').setAttribute('disabled', '')
-      status('Both clients finalized valid tokens. The missing property is global key consistency.')
+      status(`All ${partitioned.length} clients finalized valid tokens. The missing property is global key consistency.`)
     } else if (mode === 'substituted') {
       const rogue = new Issuer(0xfeedfacecafebeef0123456789abcdefn)
       const careless = new Client().issue(rogue, challenge)
@@ -151,9 +173,9 @@ function redeem(): void {
     const results = partitioned.map((entry) => ({ ...entry, result: entry.origin.redeem(entry.issuance.token, challenge, entry.issuer) }))
     $('#origin-ledger').innerHTML = results.map(({ client, issuance: clientIssuance, result }) => `<p><b>${client}</b> · ${result.ok ? 'verified' : 'refused'}</p><code>token key id: ${short(clientIssuance.token.tokenKeyId)}</code>`).join('')
     const allVerified = results.every(({ result }) => result.ok)
-    setVerdict('#redeem-verdict', 'verdict', allVerified ? 'good' : 'alarm', `REDEMPTIONS · ${allVerified ? 'BOTH VERIFIED' : 'REFUSED'}`)
-    $('#origin-detail').textContent = 'Both authenticators verify and both fresh nonces are accepted.'
-    status(allVerified ? 'Both tokens redeemed successfully under their respective issuer keys.' : 'A partition fixture redemption failed.', allVerified)
+    setVerdict('#redeem-verdict', 'verdict', allVerified ? 'good' : 'alarm', `REDEMPTIONS · ${allVerified ? 'ALL VERIFIED' : 'REFUSED'}`)
+    $('#origin-detail').textContent = 'Every authenticator verifies and every fresh nonce is accepted.'
+    status(allVerified ? `All ${results.length} tokens redeemed successfully under their respective issuer keys.` : 'A partition fixture redemption failed.', allVerified)
     return
   }
   if (!issuance) return
@@ -179,7 +201,7 @@ function link(): void {
     $('#link-map').innerHTML = linkDiagram(linked ? buckets.size : 0, partitioned.map(({ client }) => `${client} key bucket`))
     setVerdict('#link-map', 'link-map', linked ? 'alarm' : 'good')
     $('#link-map').setAttribute('aria-label', linked ? `${buckets.size} alarm lines link the clients by different issuer keys` : 'No ledger links found')
-    status(linked ? 'ALARM: colluding issuer and origin sort both redemptions by the client-specific key id.' : 'No client-specific key partition was found.', !linked)
+    status(linked ? 'ALARM: colluding issuer and origin sort every redemption by the client-specific key id.' : 'No client-specific key partition was found.', !linked)
     return
   }
   if (!issuance) return
@@ -194,7 +216,7 @@ function replay(): void { if (issuance) redeem() }
 
 function linkDiagram(count: number, labels: string[]): string {
   const lines = Array.from({ length: count }, (_, index) => {
-    const y = count === 1 ? 50 : 30 + index * 40
+    const y = count === 1 ? 50 : 15 + index * (70 / (count - 1))
     return `<g class="computed-link"><line x1="18" y1="${y}" x2="182" y2="${y}"/><circle cx="18" cy="${y}" r="4"/><circle cx="182" cy="${y}" r="4"/></g>`
   }).join('')
   // The count is rendered as its own measurement, including when it is zero: "no line was drawn"

@@ -18,12 +18,12 @@
         {
           "id": "M8",
           "source": "src/main.ts issue(), partitioned branch",
-          "mutation": "hand Alice `{ verifyKey: bobIssuer.publicKey }` so the key she was told to trust is not the key that answered her",
+          "mutation": "hand every roster client `{ verifyKey: new Issuer(0xbbb222n).publicKey }`, so the key the first client was told to trust is not the key that answered it",
           "killedBy": {
             "spec": "e2e/claims.spec.ts",
             "test": "valid proofs under client-specific keys redeem and reveal partitioning"
           },
-          "kills": "expectVerdict(page, 'dleq', { text: 'DLEQ PROOFS \u00b7 BOTH VERIFIED', result: 'good' })",
+          "kills": "expectVerdict(page, 'dleq', { text: 'DLEQ PROOFS \u00b7 ALL VERIFIED', result: 'good' })",
           "observed": "baseline 16 passed in the same session, unmutated tree md5 src/main.ts f1345c0c3d45c44b1fb0137cefe1caa1, src/pass/privacy-pass.ts b62b91b22af8364862277861d4b5ffb4, src/oprf/voprf.ts 142a1828adbfff02fc9984b4e6dd8a9b; mutated d5cf5718342642e7b25e41ea53cf66a5 2 failed / 14 passed. Verbatim: \"Error: verdict \"dleq\" text / Expected substring: \"DLEQ PROOFS \u00b7 BOTH VERIFIED\" / Received string: \"DLEQ PROOF \u00b7 REJECTED AS DESIGNED\"\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". M1 could not reach this path -- it forces DLEQ verification to accept, which leaves BOTH VERIFIED standing. The second failure is collateral, not a second finding: e2e/a11y.spec.ts:31 walks the partition fixture and clicks \"2. Redeem at origin\" unconditionally, and the abort leaves that button disabled, so it times out."
         }
       ]
@@ -50,7 +50,7 @@
             "spec": "e2e/claims.spec.ts",
             "test": "valid proofs under client-specific keys redeem and reveal partitioning"
           },
-          "kills": "expectVerdict(page, 'redemption', { text: 'REDEMPTIONS \u00b7 BOTH VERIFIED', result: 'good' })",
+          "kills": "expectVerdict(page, 'redemption', { text: 'REDEMPTIONS \u00b7 ALL VERIFIED', result: 'good' })",
           "observed": "baseline 16 passed in the same session, unmutated tree md5 src/main.ts f1345c0c3d45c44b1fb0137cefe1caa1, src/pass/privacy-pass.ts b62b91b22af8364862277861d4b5ffb4, src/oprf/voprf.ts 142a1828adbfff02fc9984b4e6dd8a9b; mutated 041bcba1103737efc3e4218b87504b8c 1 failed / 15 passed. Verbatim: \"Error: verdict \"redemption\" text / Expected substring: \"REDEMPTIONS \u00b7 BOTH VERIFIED\" / Received string: \"REDEMPTIONS \u00b7 REFUSED\"\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". M2 only reached the single-token redemption path; this is the second path that writes the same marker."
         }
       ]
@@ -93,7 +93,7 @@
             "spec": "e2e/claims.spec.ts",
             "test": "valid proofs under client-specific keys redeem and reveal partitioning"
           },
-          "kills": "expectVerdict(page, 'link-map', { text: 'Alice key bucket \u00b7 Bob key bucket', result: 'alarm' })",
+          "kills": "expectVerdict(page, 'link-map', { text: PARTITION_ROSTER.slice(0, clients).map((client) => `${client} key bucket`).join(' \u00b7 '), result: 'alarm' })",
           "observed": "baseline 16 passed in the same session, unmutated tree md5 src/main.ts f1345c0c3d45c44b1fb0137cefe1caa1, src/pass/privacy-pass.ts b62b91b22af8364862277861d4b5ffb4, src/oprf/voprf.ts 142a1828adbfff02fc9984b4e6dd8a9b; mutated 471f2e3db050a1a184d5d678a9e76e7e 1 failed / 15 passed. Verbatim: \"Error: verdict \"link-map\" data-result / expect(locator).toHaveAttribute(expected) failed / Locator: locator('[data-verdict=\"link-map\"]') / Expected: \"alarm\" / Received: \"good\"\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". This is the mutation the old harness could not see. It leaves the map's drawn lines and every word on the page untouched and changes only the state the marker publishes, so a toContainText kill would have SURVIVED it. The shared helper asserts text, data-result and palette as one claim, and the attribute is what went red."
         }
       ]
@@ -145,6 +145,17 @@
           },
           "kills": "expectClaim(page, 'computed-links', { value: buckets })",
           "observed": "baseline 16 passed in the same session, unmutated tree md5 src/main.ts f1345c0c3d45c44b1fb0137cefe1caa1, src/pass/privacy-pass.ts b62b91b22af8364862277861d4b5ffb4, src/oprf/voprf.ts 142a1828adbfff02fc9984b4e6dd8a9b; mutated 4e62c1371e0b7a20f500820c955f0cbe 1 failed / 15 passed. Verbatim: \"Error: claim \"computed-links\" data-value / Expected: \"2\" / Received: \"1\"\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". The oracle counted two key buckets off the origin ledger itself and required one drawn line per bucket, so the literal was caught by a number the test derived rather than by a number it repeated."
+        },
+        {
+          "id": "M19",
+          "source": "src/main.ts link(), partitioned branch",
+          "mutation": "replace the counted bucket total with a literal equal to the DEFAULT fixture size (`linkDiagram(linked ? 2 : 0, ...)`) -- the mutation an audit found surviving 16/16 while the literal 3 on the same line was killed",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "valid proofs under client-specific keys redeem and reveal partitioning"
+          },
+          "kills": "expectClaim(page, 'computed-links', { value: buckets }) on the second pass of the fixture, at four clients",
+          "observed": "PENDING"
         }
       ]
     },
@@ -159,8 +170,19 @@
             "spec": "e2e/claims.spec.ts",
             "test": "private blind issuance redeems but gives the colluding ledgers no match"
           },
-          "kills": "expectClaim(page, 'kat-count', { value: Number(kat?.[2]) + Number(kat?.[3]) })",
+          "kills": "expectClaim(page, 'kat-count', { value: KAT_VECTORS, text: /^8 vectors: 3 RFC 9497 [^+]+\\+ 5 RFC 9578\\b/ })",
           "observed": "baseline 16 passed in the same session, unmutated tree md5 src/main.ts f1345c0c3d45c44b1fb0137cefe1caa1, src/pass/privacy-pass.ts b62b91b22af8364862277861d4b5ffb4, src/oprf/voprf.ts 142a1828adbfff02fc9984b4e6dd8a9b; mutated 9d648591dcfde22814d43fc249c081c2 1 failed / 15 passed. Verbatim: \"Error: claim \"kat-count\" data-value / Expected: \"8\" / Received: \"9\"\" at e2e/claims.spec.ts in \"private blind issuance redeems but gives the colluding ledgers no match\". The published total no longer equals the two parts the same line prints."
+        },
+        {
+          "id": "M20",
+          "source": "src/kat/rfc9497.ts RFC9497_VECTOR_COUNT",
+          "mutation": "replace the measured `singleVectors.length + batchVectors.length` with a WRONG literal 4, so the page prints one more RFC 9497 vector than the corpus holds",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "private blind issuance redeems but gives the colluding ledgers no match"
+          },
+          "kills": "expectClaim(page, 'kat-count', { value: KAT_VECTORS, text: /^8 vectors: 3 RFC 9497 .../ }) -- both halves, because both are now derived from the corpus",
+          "observed": "PENDING"
         }
       ]
     },

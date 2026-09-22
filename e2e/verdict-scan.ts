@@ -33,6 +33,11 @@ export const MEASUREMENT_PATTERN = '(?<![\\w.])\\d[\\d,]*(?:\\.\\d+)?\\s*(?:B|KB
 export type VerdictScan = {
   markers: string[]
   claims: string[]
+  /** Per marker, every DOM id on the marker element or an ancestor of it, as `#id` selectors.
+   *  Read off the page so the "did this expectation come from the marker itself?" rule in
+   *  e2e/coverage.ts has a discovered list rather than one typed into the rule. */
+  markerIds: Array<[string, string[]]>
+  claimIds: Array<[string, string[]]>
   nested: string[]
   nestedClaims: string[]
   stylingViolations: Array<{ where: string; reason: string; text: string }>
@@ -66,17 +71,33 @@ export function collectVerdicts(options: { words: string[]; measurement: string 
   probe.remove()
   verdictColors.delete('')
 
+  // Every id a reader could address this element through: its own, and every ancestor's, because
+  // reading an ancestor's text reads the marker's text with it.
+  const idPath = (element: Element): string[] => {
+    const ids: string[] = []
+    for (let current: Element | null = element; current; current = current.parentElement) {
+      if (current.id) ids.push(`#${current.id}`)
+    }
+    return ids
+  }
+
   const markers: string[] = []
+  const markerIds: Array<[string, string[]]> = []
   const nested: string[] = []
   document.querySelectorAll('[data-verdict]').forEach((element) => {
-    markers.push(element.getAttribute('data-verdict') ?? '')
+    const name = element.getAttribute('data-verdict') ?? ''
+    markers.push(name)
+    markerIds.push([name, idPath(element)])
     if (element.parentElement?.closest('[data-verdict]')) nested.push(describe(element))
   })
 
   const claims: string[] = []
+  const claimIds: Array<[string, string[]]> = []
   const nestedClaims: string[] = []
   document.querySelectorAll('[data-claim]').forEach((element) => {
-    claims.push(element.getAttribute('data-claim') ?? '')
+    const name = element.getAttribute('data-claim') ?? ''
+    claims.push(name)
+    claimIds.push([name, idPath(element)])
     if (element.parentElement?.closest('[data-claim]')) nestedClaims.push(describe(element))
   })
 
@@ -146,7 +167,7 @@ export function collectVerdicts(options: { words: string[]; measurement: string 
     }
   })
 
-  return { markers, claims, nested, nestedClaims, stylingViolations, wordViolations, measurementViolations }
+  return { markers, claims, markerIds, claimIds, nested, nestedClaims, stylingViolations, wordViolations, measurementViolations }
 }
 
 export type Mutation = { id: string; source: string; mutation: string; killedBy: { spec: string; test: string }; observed: string }
