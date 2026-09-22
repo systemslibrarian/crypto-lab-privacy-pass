@@ -1,5 +1,5 @@
 {
-  "$comment": "Every rendered verdict on this page carries a data-verdict marker, and every marker listed here has been forced false and watched go red. A mutation counts only when the unmutated baseline passed in the same run, the failure was that marker's OWN assertion, and the run served the mutated bundle (CI=1, port 4684, no reused server). e2e/verdicts.spec.ts fails on any rendered marker missing from this file. Every branch that writes a marker has its own mutation: markers with more than one code path carry more than one entry, because covering the marker is not the same as covering the branch.",
+  "$comment": "Every rendered verdict AND every rendered measurement on this page carries a marker, and every marker listed here has been forced false and watched go red. A mutation counts only when the unmutated baseline passed in the same session, the failure was that marker's OWN assertion, and the run served the mutated bundle (CI=1, port 4684, no reused server). e2e/verdicts.spec.ts fails on any rendered marker missing from this file, on any marker here the page no longer renders, and on any mutation whose killedBy test is not OBSERVED executing expectVerdict/expectClaim against that marker -- the helpers record every pair they run and the check reads that record, because the source scan this replaced was satisfied by a commented-out call. A text-only assertion says nothing about state and cannot be recorded as a kill, and an expectation read off the marker under assertion cannot be recorded either. Each entry below was re-run in an isolated `git archive` tree with its own node_modules symlink and CI=1, with the source md5 and the content-hashed bundle name recorded before and after, because a patch that never applied reports as a survivor. Every branch that writes a marker has its own mutation: markers with more than one code path carry more than one entry, because covering the marker is not the same as covering the branch.",
   "markers": {
     "dleq": {
       "renders": "#dleq \u2014 whether the client accepted the issuer's DLEQ proof under the key it was told to trust",
@@ -8,15 +8,23 @@
           "id": "M1",
           "source": "src/oprf/voprf.ts verifyDleqBatch",
           "mutation": "replace the body with `return true`",
-          "kills": "e2e/claims.spec.ts:55 expect(getByText('DLEQ PROOF \u00b7 REJECTED AS DESIGNED')).toBeVisible()",
-          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 24188700e77fb6978d541f39da7a564f 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('DLEQ PROOF \u00b7 REJECTED AS DESIGNED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:55. The unpublished-key mode stopped aborting and rendered 'DLEQ PROOF \u00b7 ACCEPTED AN UNPUBLISHED KEY' instead."
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "an unpublished issuer key aborts issuance, and the token a careless client keeps is refused"
+          },
+          "kills": "expectVerdict(page, 'dleq', { text: 'DLEQ PROOF \u00b7 REJECTED AS DESIGNED', result: 'good' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/oprf/voprf.ts md5 142a1828adbfff02fc9984b4e6dd8a9b bundle index-KKXo5gXL.js; mutated 3a8bc6fd7a4a3b455891ee6a104de616 bundle index-YLw-HGRi.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: verdict \"dleq\" text / expect(locator).toContainText(expected) failed / Expected substring: \"DLEQ PROOF \u00b7 REJECTED AS DESIGNED\" / Received string:    \"DLEQ PROOF \u00b7 ACCEPTED AN UNPUBLISHED KEY\"\" at e2e/claims.spec.ts in \"an unpublished issuer key aborts issuance, and the token a careless client keeps is refused\". The client stopped refusing the unpublished key and finalized a token against it. `return true` alone does not build here -- tsconfig sets noUnusedLocals, so the composites go unused and `tsc -b` fails the webServer before a single test runs. A build failure is not a kill; the mutation is `|| true` on the same return, which leaves every value used and still makes the verifier accept everything."
         },
         {
           "id": "M8",
           "source": "src/main.ts issue(), partitioned branch",
-          "mutation": "hand Alice `{ verifyKey: bobIssuer.publicKey }` so the key she was told to trust is not the key that answered her",
-          "kills": "e2e/claims.spec.ts:42 expect(getByText('DLEQ PROOFS \u00b7 BOTH VERIFIED')).toBeVisible()",
-          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 33a27c733002186d3cdfa8f86e05c684 2 failed / 13 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('DLEQ PROOFS \u00b7 BOTH VERIFIED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:42. The second failure is collateral, not a second finding: e2e/a11y.spec.ts:31 walks the partition fixture and clicks '2. Redeem at origin' unconditionally, and the abort leaves that button disabled, so it times out. M1 could not reach this path -- it forces DLEQ verification to accept, which leaves 'BOTH VERIFIED' standing."
+          "mutation": "hand every roster client `{ verifyKey: new Issuer(0xbbb222n).publicKey }`, so the key the first client was told to trust is not the key that answered it",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "valid proofs under client-specific keys redeem and reveal partitioning"
+          },
+          "kills": "expectVerdict(page, 'dleq', { text: 'DLEQ PROOFS \u00b7 ALL VERIFIED', result: 'good' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated c58649859dfa73518c1513f4a26dd88a bundle index-BhOa-0T6.js, so the patch reached the built artifact. 2 failed / 10 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Test timeout of 30000ms exceeded. / Error: locator.click: Test timeout of 30000ms exceeded. / Call log: / - waiting for getByRole('button', { name: '2. Redeem at origin' }) / - locator resolved to <button disabled id=\"redeem\" type=\"button\">2. Redeem at origin</button> / - attempting click action / 2 \u00d7 waiting for element to be visible, enabled and stable / - element is not enabled / - retrying click action / - waiting 20ms / 2 \u00d7 waiting for element to be visible, enabled and stable / - element is not enabled / - retrying click action / - waiting 100ms / 55 \u00d7 waiting for element to be visible, enabled and stable / - element is not enabled / - retrying click action / - waiting 500ms / 47 |   await page.getByLabel(/BROKEN: per-client published key/).check() / 48 |   await page.getByRole('button', { name: '1. Issue token' }).click() / > 49 |   await page.getByRole('button', { name: '2. Redeem at origin' }).click() / |                                                                   ^ / 50 |   await page.getByRole('button', { name: '3. Try to link ledgers' }).click() / 51 |   await scan(page, 'key partitioned') / 52 |   await page.getByLabel(/BROKEN: unpublished issuer key/).check() / at /private/tmp/claude-501/-Users-gmcas-repos-crypto-lab/53359beb-a05f-4a12-9646-7ae87d87b132/scratchpad/privacy-pass-verdict/tree-M8/e2e/a11y.spec.ts:49:67 / Error Context: test-results/a11y-every-reachable-protocol-state-passes-the-complete-gate-a11y/error-context.md / Retry #1 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 / Test timeout of 30000ms exceeded. / Error: locator.click: Test timeout of 30000ms exceeded. / Call log: / - waiting for getByRole('button', { name: '2. Redeem at origin' }) / - locator resolved to <button disabled id=\"redeem\" type=\"button\">2. Redeem at origin</button> / - attempting click action / 2 \u00d7 waiting for element to be visible, enabled and stable / - element is not enabled / - retrying click action / - waiting 20ms / 2 \u00d7 waiting for element to be visible, enabled and stable / - element is not enabled / - retrying click action / - waiting 100ms / 53 \u00d7 waiting for element to be visible, enabled and stable / - element is not enabled / - retrying click action / - waiting 500ms / 47 |   await page.getByLabel(/BROKEN: per-client published key/).check() / 48 |   await page.getByRole('button', { name: '1. Issue token' }).click() / > 49 |   await page.getByRole('button', { name: '2. Redeem at origin' }).click() / |                                                                   ^ / 50 |   await page.getByRole('button', { name: '3. Try to link ledgers' }).click() / 51 |   await scan(page, 'key partitioned') / 52 |   await page.getByLabel(/BROKEN: unpublished issuer key/).check() / at /private/tmp/claude-501/-Users-gmcas-repos-crypto-lab/53359beb-a05f-4a12-9646-7ae87d87b132/scratchpad/privacy-pass-verdict/tree-M8/e2e/a11y.spec.ts:49:67 / Error Context: test-results/a11y-every-reachable-protocol-state-passes-the-complete-gate-a11y-retry1/error-context.md / 2) [claims] \u203a e2e/claims.spec.ts:93:1 \u203a valid proofs under client-specific keys redeem and reveal partitioning / Error: verdict \"dleq\" text / expect(locator).toContainText(expected) failed / Expected substring: \"DLEQ PROOFS \u00b7 ALL VERIFIED\" / Received string:    \"DLEQ PROOF \u00b7 REJECTED AS DESIGNED\"\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". M1 could not reach this path -- it forces DLEQ verification to accept, which leaves BOTH VERIFIED standing. The second failure is collateral, not a second finding: e2e/a11y.spec.ts:31 walks the partition fixture and clicks \"2. Redeem at origin\" unconditionally, and the abort leaves that button disabled, so it times out."
         }
       ]
     },
@@ -27,15 +35,23 @@
           "id": "M2",
           "source": "src/pass/privacy-pass.ts Origin.redeem",
           "mutation": "delete `this.spent.add(nonceId)` so a redeemed nonce is never recorded",
-          "kills": "e2e/claims.spec.ts:71 expect(getByText('REDEMPTION \u00b7 REFUSED')).toBeVisible()",
-          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 59ad1baad792f0fa4ea5d6ce035b3b7d 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('REDEMPTION \u00b7 REFUSED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:71. The replay was accepted, so the verdict read 'REDEMPTION \u00b7 VERIFIED'."
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "a redeemed token cannot be replayed"
+          },
+          "kills": "expectVerdict(page, 'redemption', { text: 'REDEMPTION \u00b7 REFUSED', result: 'good' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/pass/privacy-pass.ts md5 b62b91b22af8364862277861d4b5ffb4 bundle index-KKXo5gXL.js; mutated 0857a3853dd193b63f50d6d117fe41fd bundle index-BK0CjAz1.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: verdict \"redemption\" text / expect(locator).toContainText(expected) failed / Expected substring: \"REDEMPTION \u00b7 REFUSED\" / Received string:    \"REDEMPTION \u00b7 VERIFIED\"\" at e2e/claims.spec.ts in \"a redeemed token cannot be replayed\". The replay was accepted, so the second presentation read VERIFIED. Note the resolved element in the call log carried data-result=\"alarm\": the integrity check still noticed, and the words alone are what the old text-only kill would have tested."
         },
         {
           "id": "M7",
           "source": "src/main.ts redeem(), partitioned branch",
           "mutation": "append `&& false` to `results.every(({ result }) => result.ok)`",
-          "kills": "e2e/claims.spec.ts:44 expect(getByText('REDEMPTIONS \u00b7 BOTH VERIFIED')).toBeVisible()",
-          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 71536436e0550d3dfd5d8eefa8c8affb 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('REDEMPTIONS \u00b7 BOTH VERIFIED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:44. M2 only reached the single-token redemption path; this is the second path that writes the same marker."
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "valid proofs under client-specific keys redeem and reveal partitioning"
+          },
+          "kills": "expectVerdict(page, 'redemption', { text: 'REDEMPTIONS \u00b7 ALL VERIFIED', result: 'good' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated 33503a497022650ee818891c925b9679 bundle index-D3camZq8.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: verdict \"redemption\" text / expect(locator).toContainText(expected) failed / Expected substring: \"REDEMPTIONS \u00b7 ALL VERIFIED\" / Received string:    \"REDEMPTIONS \u00b7 REFUSED\"\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". M2 only reached the single-token redemption path; this is the second path that writes the same marker."
         }
       ]
     },
@@ -46,27 +62,39 @@
           "id": "M3",
           "source": "src/pass/privacy-pass.ts issuerCanLink",
           "mutation": "replace the body with `false`",
-          "kills": "e2e/claims.spec.ts:33 expect(getByText('COLLUSION CHECK \u00b7 LINKED: BLINDING WAS REMOVED')).toBeVisible()",
-          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 4574d9d034eb2f622c13b720e4481541 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('COLLUSION CHECK \u00b7 LINKED: BLINDING WAS REMOVED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:33. With blinding removed the page still claimed 'NO COMPUTABLE MATCH'."
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "removing blinding produces an explicit link alarm"
+          },
+          "kills": "expectVerdict(page, 'linkage', { text: 'COLLUSION CHECK \u00b7 LINKED: BLINDING WAS REMOVED', result: 'alarm' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/pass/privacy-pass.ts md5 b62b91b22af8364862277861d4b5ffb4 bundle index-KKXo5gXL.js; mutated 0dfb6d6c11d42797e878853909c9af08 bundle index-DpYLD_5l.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: verdict \"linkage\" text / expect(locator).toContainText(expected) failed / Expected substring: \"COLLUSION CHECK \u00b7 LINKED: BLINDING WAS REMOVED\" / Received string:    \"COLLUSION CHECK \u00b7 NO COMPUTABLE MATCH\"\" at e2e/claims.spec.ts in \"removing blinding produces an explicit link alarm\". With blinding removed the page still claimed no computable match. Written as `&& false` on the existing expression rather than a bare `false`, because dropping the expression leaves the hashToGroup import unused and noUnusedLocals fails the build instead of the assertion."
         },
         {
           "id": "M9",
           "source": "src/main.ts link(), partitioned branch",
           "mutation": "truncate the key id to the empty string so both clients fall into one bucket",
-          "kills": "e2e/claims.spec.ts:46 expect(getByText('PROOFS VERIFIED \u00b7 AND PARTITIONED')).toBeVisible()",
-          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 92932d73ffb3fc863809adadc7c0226b 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: getByText('PROOFS VERIFIED \u00b7 AND PARTITIONED') / Expected: visible / Error: element(s) not found\" at claims.spec.ts:46. M3 only reached the single-token linkability path."
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "valid proofs under client-specific keys redeem and reveal partitioning"
+          },
+          "kills": "expectVerdict(page, 'linkage', { text: 'PROOFS VERIFIED \u00b7 AND PARTITIONED', result: 'alarm' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated 601fd8540e643e70c7aed6f8d6ba86de bundle index-Crpk-Y7Z.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: verdict \"linkage\" text / expect(locator).toContainText(expected) failed / Expected substring: \"PROOFS VERIFIED \u00b7 AND PARTITIONED\" / Received string:    \"COLLUSION CHECK \u00b7 NO PARTITION\"\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". M3 only reached the single-token linkability path."
         }
       ]
     },
     "link-map": {
-      "renders": "#link-map \u2014 the drawn lines, one per computable link across the two ledgers",
+      "renders": "#link-map \u2014 the drawn comparison between the two ledgers, and its own pass/alarm state",
       "mutations": [
         {
-          "id": "M4",
-          "source": "src/main.ts linkDiagram",
-          "mutation": "ignore the computed count and always emit a single line (`length: 1`)",
-          "kills": "e2e/claims.spec.ts:47 expect(locator('#link-map .computed-link')).toHaveCount(2)",
-          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated c10d4b8452abd659cee30954b6ac3302 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toHaveCount(expected) failed / Locator: locator('#link-map .computed-link') / Expected: 2 / Received: 1\" at claims.spec.ts:47. Two partitioned buckets drew one line."
+          "id": "M10",
+          "source": "src/main.ts link(), partitioned branch",
+          "mutation": "write the pass state onto the map unconditionally (`setVerdict('#link-map', 'link-map', 'good')`) while leaving its drawn lines and text alone",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "valid proofs under client-specific keys redeem and reveal partitioning"
+          },
+          "kills": "expectVerdict(page, 'link-map', { text: PARTITION_ROSTER.slice(0, clients).map((client) => `${client} key bucket`).join(' \u00b7 '), result: 'alarm' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated 3583493291f973e86e27c7b4c8e5e1cf bundle index-BSz9N-T4.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: verdict \"link-map\" data-result / expect(locator).toHaveAttribute(expected) failed / Expected: \"alarm\" / Received: \"good\"\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". This is the mutation the old harness could not see. It leaves the map's drawn lines and every word on the page untouched and changes only the state the marker publishes, so a toContainText kill would have SURVIVED it. The shared helper asserts text, data-result and palette as one claim, and the attribute is what went red."
         }
       ]
     },
@@ -76,21 +104,197 @@
         {
           "id": "M5",
           "source": "src/main.ts status()",
-          "mutation": "ignore the integrity flag and always write `status good`",
-          "kills": "e2e/claims.spec.ts:34 expect(locator('[data-verdict=\"status\"]')).toHaveClass(/alarm/)",
-          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 34a8e727f2c49f9dc50299de6d26459a 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toHaveClass(expected) failed / Expected pattern: /alarm/ / Received string: \\\"status good\\\"\" at claims.spec.ts:34, resolving to <p id=\"status\" class=\"status good\">ALARM: issuer hash-to-group value equals the orig...</p> \u2014 the alarm was reported in the pass colour."
+          "mutation": "ignore the integrity flag and always write the pass state",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "removing blinding produces an explicit link alarm"
+          },
+          "kills": "expectVerdict(page, 'status', { text: 'ALARM: issuer hash-to-group value equals the origin-computable input point.', result: 'alarm' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated 0c03c4e82d709000bf7aa5cf7dd910e1 bundle index-CtntTpWH.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: verdict \"status\" data-result / expect(locator).toHaveAttribute(expected) failed / Expected: \"alarm\" / Received: \"good\"\" at e2e/claims.spec.ts in \"removing blinding produces an explicit link alarm\". The alarm sentence was still printed word for word; only the state moved. The live region reported the linkability alarm in the pass colour."
         }
       ]
     },
     "negative-claim": {
-      "renders": "#negative-claim \u2014 the \u00a74.1d limitation, shown in the alarm palette only in the fixture that violates it",
+      "renders": "#negative-claim \u2014 the \u00a74.1d limitation, rendered in the alarm palette only in the fixture that violates it",
       "mutations": [
         {
           "id": "M6",
           "source": "src/main.ts issue(), partitioned branch",
           "mutation": "drop the `$('#negative-claim').removeAttribute('hidden')` call so the fixture renders without its limitation",
-          "kills": "e2e/claims.spec.ts:48 expect(locator('#negative-claim')).toBeVisible()",
-          "observed": "baseline cc92c383e9cce4e1773ad92efbc7a2f8 15 passed; mutated 2c2c131cefe2a87abe3887d9c50536f2 1 failed / 14 passed. Verbatim: \"Error: expect(locator).toBeVisible() failed / Locator: locator('#negative-claim') / Expected: visible / Received: hidden\" at claims.spec.ts:48. The partition fixture rendered every verdict green with its \u00a74.1d limitation absent."
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "valid proofs under client-specific keys redeem and reveal partitioning"
+          },
+          "kills": "expectVerdict(page, 'negative-claim', { text: 'does not show it published the same key to every client', result: 'alarm' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated c4672205f4310a2a2fad216e08fa2363 bundle index-Bb8e65Jh.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: verdict \"negative-claim\" is not rendered / expect(locator).toBeVisible() failed / Expected: visible / Received: hidden\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". The partition fixture rendered every verdict green with its \u00a74.1d limitation absent."
+        }
+      ]
+    }
+  },
+  "claims": {
+    "computed-links": {
+      "renders": "the caption inside #link-map \u2014 how many equality-testable links were drawn, counted from the buckets themselves",
+      "mutations": [
+        {
+          "id": "M4",
+          "source": "src/main.ts link(), partitioned branch",
+          "mutation": "draw a literal one line instead of one per key bucket (`linkDiagram(linked ? 1 : 0, ...)`)",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "valid proofs under client-specific keys redeem and reveal partitioning"
+          },
+          "kills": "expectClaim(page, 'computed-links', { value: buckets })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated 85426c19091aedeacb7f3c245d102cce bundle index-Bu-604Th.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"computed-links\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"2\" / Received: \"1\"\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". The oracle counted two key buckets off the origin ledger itself and required one drawn line per bucket, so the literal was caught by a number the test derived rather than by a number it repeated."
+        },
+        {
+          "id": "M19",
+          "source": "src/main.ts link(), partitioned branch",
+          "mutation": "replace the counted bucket total with a literal equal to the DEFAULT fixture size (`linkDiagram(linked ? 2 : 0, ...)`) -- the mutation an audit found surviving 16/16 while the literal 3 on the same line was killed",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "valid proofs under client-specific keys redeem and reveal partitioning"
+          },
+          "kills": "expectClaim(page, 'computed-links', { value: buckets }) on the second pass of the fixture, at four clients",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated e75e21a505e24568c3dbb77009f262ba bundle index-DzgGyFcD.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"computed-links\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"4\" / Received: \"2\"\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". This is the Fix 4 finding, recorded. The literal equals the DEFAULT fixture size, so every assertion that can be written against a single run passes: it survived 16/16 before the roster control existed, while a literal 3 on the same line was killed. What kills it is the second pass of the fixture at four clients, not a better assertion -- the oracle did not change, the reachable state did."
+        }
+      ]
+    },
+    "kat-count": {
+      "renders": "#kat-count \u2014 the size of the official known-answer corpus the unit suite iterates",
+      "mutations": [
+        {
+          "id": "M11",
+          "source": "src/main.ts render()",
+          "mutation": "add one to the published total while leaving the two printed parts alone",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "private blind issuance redeems but gives the colluding ledgers no match"
+          },
+          "kills": "expectClaim(page, 'kat-count', { value: KAT_VECTORS, text: /^8 vectors: 3 RFC 9497 [^+]+\\+ 5 RFC 9578\\b/ })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated 0d4a3a32d96c34ea0213519d3ad3332d bundle index-CcJukrvI.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"kat-count\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"8\" / Received: \"9\"\" at e2e/claims.spec.ts in \"private blind issuance redeems but gives the colluding ledgers no match\". The published total no longer equals the two parts the same line prints."
+        },
+        {
+          "id": "M20",
+          "source": "src/kat/rfc9497.ts RFC9497_VECTOR_COUNT",
+          "mutation": "replace the measured `singleVectors.length + batchVectors.length` with a WRONG literal 4, so the page prints one more RFC 9497 vector than the corpus holds",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "private blind issuance redeems but gives the colluding ledgers no match"
+          },
+          "kills": "expectClaim(page, 'kat-count', { value: KAT_VECTORS, text: /^8 vectors: 3 RFC 9497 .../ }) -- both halves, because both are now derived from the corpus",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/kat/rfc9497.ts md5 7247e0f7d900d5fae8d1d48f272386a3 bundle index-KKXo5gXL.js; mutated db206c70f15a13e7f642d8cc752f098c bundle index-CwKHaOw9.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"kat-count\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"8\" / Received: \"9\"\" at e2e/claims.spec.ts in \"private blind issuance redeems but gives the colluding ledgers no match\". The wrong literal is the point: the page rendered \"9 vectors: 4 RFC 9497 P-384 VOPRF + 5 RFC 9578 type-0x0001 issuance\" over a corpus holding three RFC 9497 vectors, and all 16 tests stayed green, because the oracle checked only that the total equalled the two numbers the page itself printed. Both parts are now counted from the corpus in e2e/claims.spec.ts, so the total AND each part are anchored to something outside the page."
+        }
+      ]
+    },
+    "published-key": {
+      "renders": "#pk \u2014 the issuer public key on the wire, with its measured length",
+      "mutations": [
+        {
+          "id": "M12",
+          "source": "src/main.ts render()",
+          "mutation": "publish the key with its leading tag byte dropped (`pointBytes(issuer.publicKey).slice(1)`)",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "private blind issuance redeems but gives the colluding ledgers no match"
+          },
+          "kills": "expectClaim(page, 'published-key', { value: bytes, text: 'bytes' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated 4de3ffa5ece6e62618a003f90160bc5e bundle index-DJjiIUQt.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"published-key\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"49\" / Received: \"48\"\" at e2e/claims.spec.ts in \"private blind issuance redeems but gives the colluding ledgers no match\". The oracle derives 49 from the RFC field list (one tag byte plus one P-384 coordinate) and also requires the printed hex to be twice the published length."
+        }
+      ]
+    },
+    "key-id": {
+      "renders": "#key-id \u2014 the RFC 9578 token key id, with its measured length",
+      "mutations": [
+        {
+          "id": "M13",
+          "source": "src/main.ts render()",
+          "mutation": "publish the key id with its first byte dropped (`keyId(issuer.publicKey).slice(1)`)",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "private blind issuance redeems but gives the colluding ledgers no match"
+          },
+          "kills": "expectClaim(page, 'key-id', { value: bytes, text: 'bytes' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated 4f24cd3d4cf455cfc6eb16a196078255 bundle index-ysETCGaE.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"key-id\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"32\" / Received: \"31\"\" at e2e/claims.spec.ts in \"private blind issuance redeems but gives the colluding ledgers no match\". A display-local mutation on purpose: shortening keyId() itself would cascade through tokenInput and redemption and fail half the suite, which proves nothing about this marker."
+        }
+      ]
+    },
+    "wire-request": {
+      "renders": "#wire-request \u2014 the serialized TokenRequest, with its measured length",
+      "mutations": [
+        {
+          "id": "M14",
+          "source": "src/pass/privacy-pass.ts serializeRequest",
+          "mutation": "drop the two-byte TOKEN_TYPE prefix from the serialization",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "private blind issuance redeems but gives the colluding ledgers no match"
+          },
+          "kills": "expectClaim(page, 'wire-request', { value: bytes, text: 'bytes' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/pass/privacy-pass.ts md5 b62b91b22af8364862277861d4b5ffb4 bundle index-KKXo5gXL.js; mutated e1e5ca6f5a9860b92e87e7878829df9a bundle index-fZ1Yq5Le.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"wire-request\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"52\" / Received: \"50\"\" at e2e/claims.spec.ts in \"private blind issuance redeems but gives the colluding ledgers no match\". TOKEN_TYPE dropped from the serialization; the page printed the shorter request with its own measured length, and the derived 2 + 1 + 49 caught it."
+        }
+      ]
+    },
+    "wire-response": {
+      "renders": "#wire-response \u2014 the serialized TokenResponse, with its measured length",
+      "mutations": [
+        {
+          "id": "M15",
+          "source": "src/pass/privacy-pass.ts serializeResponse",
+          "mutation": "drop the proof challenge scalar from the serialization",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "private blind issuance redeems but gives the colluding ledgers no match"
+          },
+          "kills": "expectClaim(page, 'wire-response', { value: bytes, text: 'bytes' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/pass/privacy-pass.ts md5 b62b91b22af8364862277861d4b5ffb4 bundle index-KKXo5gXL.js; mutated a57826fc33f23f9849b4f80f2450316c bundle index-uB2kXiAV.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"wire-response\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"145\" / Received: \"97\"\" at e2e/claims.spec.ts in \"private blind issuance redeems but gives the colluding ledgers no match\". The proof challenge scalar dropped from the serialization."
+        }
+      ]
+    },
+    "wire-token": {
+      "renders": "#wire-token \u2014 the serialized Token, with its measured length",
+      "mutations": [
+        {
+          "id": "M16",
+          "source": "src/pass/privacy-pass.ts serializeToken",
+          "mutation": "drop the challenge digest from the serialization",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "private blind issuance redeems but gives the colluding ledgers no match"
+          },
+          "kills": "expectClaim(page, 'wire-token', { value: bytes, text: 'bytes' })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/pass/privacy-pass.ts md5 b62b91b22af8364862277861d4b5ffb4 bundle index-KKXo5gXL.js; mutated aa9ab094f894b5f81997c8263e091ea6 bundle index-DLwWf26c.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"wire-token\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"146\" / Received: \"114\"\" at e2e/claims.spec.ts in \"private blind issuance redeems but gives the colluding ledgers no match\". The challenge digest dropped from the serialization."
+        }
+      ]
+    },
+    "truncated-key-id": {
+      "renders": "the <b> in the issuer ledger \u2014 the one byte the issuer sorts requests by",
+      "mutations": [
+        {
+          "id": "M17",
+          "source": "src/oprf/voprf.ts truncatedKeyId",
+          "mutation": "return the FIRST byte of the key id instead of the last",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "private blind issuance redeems but gives the colluding ledgers no match"
+          },
+          "kills": "expectClaim(page, 'truncated-key-id', { value: Number.parseInt(keyIdHex.slice(-2), 16) })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/oprf/voprf.ts md5 142a1828adbfff02fc9984b4e6dd8a9b bundle index-KKXo5gXL.js; mutated 24db4dbcad7fc9575a59b4e40c2f7763 bundle index-DKDTXprC.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"truncated-key-id\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"216\" / Received: \"137\"\" at e2e/claims.spec.ts in \"private blind issuance redeems but gives the colluding ledgers no match\". The oracle reads the expected byte off the key id marker the page itself prints (216 = 0xd8, its last byte) rather than repeating a constant, so returning the first byte instead is caught."
+        }
+      ]
+    },
+    "blind-scalar": {
+      "renders": "the <b> in #client-detail \u2014 the blind the broken mode actually used",
+      "mutations": [
+        {
+          "id": "M18",
+          "source": "src/main.ts issue()",
+          "mutation": "issue the unblinded fixture with a blind of 2 instead of the identity scalar",
+          "killedBy": {
+            "spec": "e2e/claims.spec.ts",
+            "test": "removing blinding produces an explicit link alarm"
+          },
+          "kills": "expectClaim(page, 'blind-scalar', { value: 1 })",
+          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated 355d05152b0f526f94b3401dd8981bf9 bundle index-CGobJgr_.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: claim \"blind-scalar\" data-value / expect(locator).toHaveAttribute(expected) failed / Expected: \"1\" / Received: \"2\"\" at e2e/claims.spec.ts in \"removing blinding produces an explicit link alarm\". The broken mode is defined by the identity blind, and the page prints the scalar it actually used, so issuing under a different one is visible rather than silent."
         }
       ]
     }
