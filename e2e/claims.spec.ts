@@ -35,7 +35,7 @@ test('Blind RSA panel renders every manifest claim and source boundary', async (
   }
   await expect(panel.locator('p').filter({ hasText: 'At 2048 bits' })).toContainText('290')
   await expect(panel).toContainText('VOPRF path is not an RSA oracle')
-  await expect(panel.getByRole('link', { name: /RSA Forge.*eNFS section/ })).toHaveAttribute('href', /crypto-lab-rsa-forge#sqrt-enfs/)
+  await expect(panel.getByRole('link', { name: /RSA Forge.*eNFS section/ })).toHaveAttribute('href', 'https://systemslibrarian.github.io/crypto-lab-rsa-forge/#oracle-without-factoring')
 })
 
 test('removing blinding produces an explicit link alarm', async ({ page }) => {
