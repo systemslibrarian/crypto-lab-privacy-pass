@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+
+const claimManifest = JSON.parse(readFileSync(new URL('./verdict-mutations.json', import.meta.url), 'utf8')) as { claims: Array<{ id: string; text: string; source: string }> }
 
 test.beforeEach(async ({ page }) => { await page.goto('/') })
 
@@ -22,6 +25,17 @@ test('private blind issuance redeems but gives the colluding ledgers no match', 
   await page.getByRole('button', { name: '3. Try to link ledgers' }).click()
   await expect(page.getByText('COLLUSION CHECK · NO COMPUTABLE MATCH')).toBeVisible()
   await expect(page.locator('#link-map .computed-link')).toHaveCount(0)
+})
+
+test('Blind RSA panel renders every manifest claim and source boundary', async ({ page }) => {
+  const panel = page.locator('#blind-rsa')
+  await expect(panel).toBeVisible()
+  for (const claim of claimManifest.claims) {
+    await expect(panel, `${claim.id} from ${claim.source}`).toContainText(claim.text)
+  }
+  await expect(panel.locator('p').filter({ hasText: 'At 2048 bits' })).toContainText('290')
+  await expect(panel).toContainText('VOPRF path is not an RSA oracle')
+  await expect(panel.getByRole('link', { name: /RSA Forge.*eNFS section/ })).toHaveAttribute('href', 'https://systemslibrarian.github.io/crypto-lab-rsa-forge/#oracle-without-factoring')
 })
 
 test('removing blinding produces an explicit link alarm', async ({ page }) => {

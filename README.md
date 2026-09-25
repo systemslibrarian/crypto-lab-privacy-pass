@@ -30,6 +30,14 @@ Removing the blind makes an issuer's input point directly comparable with a rede
 
 Privacy Pass protocols support anonymous authorization tokens for applications such as challenge and abuse mitigation. RFC 9576 defines the architecture, RFC 9577 defines common token structures, and RFC 9578 defines this VOPRF token type. Type `0x0002` uses [Blind RSA](https://www.rfc-editor.org/rfc/rfc9474), is publicly verifiable, and is not implemented here.
 
+## The Other Token Type: Blind RSA and √eNFS (2026)
+
+Privacy Pass defines two issuance types: `0x0001` VOPRF, privately verifiable and used by this lab, and `0x0002` Blind RSA, publicly verifiable (RFC 9578 §§8.2.1–8.2.2). Shea et al. name Apple Private Access Tokens, Fastly, Persona, Cloudflare, and iCloud Private Relay as Blind RSA deployments ([IACR ePrint 2026/2131, §7.2](https://eprint.iacr.org/2026/2131.pdf)).
+
+Blind RSA exposes an issuer as a raw RSA oracle on blinded values. Attack queries are indistinguishable from honest issuance queries, providing the phase-1 access required by √eNFS. Lysyanskaya proved RSABSSA secure under one-more RSA, but the paper argues that assumption does not model this delayed-target RSA attack ([RFC 9474 §7](https://www.rfc-editor.org/rfc/rfc9474#section-7); [ePrint §7.2](https://eprint.iacr.org/2026/2131.pdf)). The measured 1024-bit result took 1,380 CPU-years over five months and made `2^32` oracle queries. Separately, the paper extrapolates that at 2048 bits the attack needs about `2^90` computation and `2^43` queries: roughly `2^38` CAPTCHAs at 30 tokens each. Cloudflare's more than `2^43` total HTTP requests per day are an infrastructure comparison, not available Blind RSA signing queries. The paper's hypothetical scale calculation assumes Apple's one-per-minute limit: about 17 million years for one device, or 2.3 days across 2.3 billion devices issuing at that rate. Persona's per-call price gives a hypothetical estimate of about $13 trillion. Key-rotation epochs range from hours to weeks (ePrint §7.2).
+
+The paper's mitigations are frequent key rotation in the short term, larger keys in the medium term, and zero-knowledge proofs or post-quantum schemes in the long term. Use the VOPRF type when public verifiability is unnecessary. This lab does not run the attack: its VOPRF path is not an RSA oracle, so √eNFS does not apply to it. See the [Crypto Lab RSA Forge √eNFS section](https://systemslibrarian.github.io/crypto-lab-rsa-forge/#oracle-without-factoring) for the adjacent RSA demo.
+
 ## How to Run Locally
 
 ```bash
@@ -39,7 +47,7 @@ npm run dev
 
 ## Related Demos
 
-See the Crypto Lab [Blind Sign](https://crypto-lab.systemslibrarian.dev/) and OPAQUE demonstrations for adjacent ideas. Blind RSA signatures and password OPRFs are different constructions with different privacy properties.
+See the Crypto Lab [Blind Sign](https://crypto-lab.systemslibrarian.dev/) and [RSA Forge √eNFS section](https://systemslibrarian.github.io/crypto-lab-rsa-forge/#oracle-without-factoring), plus the OPAQUE demonstrations, for adjacent ideas. Blind RSA signatures and password OPRFs are different constructions with different privacy properties.
 
 ## Build & Verify
 

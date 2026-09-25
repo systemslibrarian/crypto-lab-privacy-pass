@@ -1,5 +1,13 @@
 {
   "$comment": "Every rendered verdict on this page carries a data-verdict marker, and every marker listed here has been forced false and watched go red. A mutation counts only when the unmutated baseline passed in the same run, the failure was that marker's OWN assertion, and the run served the mutated bundle (CI=1, port 4684, no reused server). e2e/verdicts.spec.ts fails on any rendered marker missing from this file. Every branch that writes a marker has its own mutation: markers with more than one code path carry more than one entry, because covering the marker is not the same as covering the branch.",
+  "claims": [
+    { "id": "token-types", "text": "0x0001 VOPRF", "source": "RFC 9578 §§8.2.1–8.2.2" },
+    { "id": "deployments", "text": "Apple Private Access Tokens, Fastly, Persona, Cloudflare, and iCloud Private Relay", "source": "IACR ePrint 2026/2131 §7.2" },
+    { "id": "attack-model", "text": "raw RSA oracle", "source": "IACR ePrint 2026/2131 §7.2" },
+    { "id": "attack-cost", "text": "At 2048 bits", "source": "IACR ePrint 2026/2131 §7.2" },
+    { "id": "mitigations", "text": "rotate keys frequently", "source": "IACR ePrint 2026/2131 §7.2" },
+    { "id": "scope", "text": "does not run the attack", "source": "Local implementation scope" }
+  ],
   "markers": {
     "dleq": {
       "renders": "#dleq \u2014 whether the client accepted the issuer's DLEQ proof under the key it was told to trust",
