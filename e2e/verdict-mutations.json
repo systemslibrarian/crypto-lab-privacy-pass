@@ -240,8 +240,8 @@
           "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 c3b9ab86e10a -> 46cb5b1cc1e0; bundle b1a83f8a783f -> ecf7ee874fae -> 9b5686252595. VERDICT FAILED FOR THE WRONG REASON: Error: verdict \"negative-claim\" is not rendered",
           "patch": {
             "file": "src/main.ts",
-            "from": "    $('#link-map').setAttribute('aria-label', linked ? `${buckets.size} alarm lines link the clients by different issuer keys` : 'No ledger links found')",
-            "to": "    $('#link-map').setAttribute('aria-label', linked ? `2 alarm lines link the clients by different issuer keys` : 'No ledger links found')"
+            "from": "    $('#link-map').innerHTML = linkDiagram(linked ? buckets.size : 0, partitioned.map(({ client }) => `${client} key bucket`))",
+            "to": "    $('#link-map').innerHTML = linkDiagram(linked ? 2 : 0, partitioned.map(({ client }) => `${client} key bucket`))"
           }
         }
       ]
