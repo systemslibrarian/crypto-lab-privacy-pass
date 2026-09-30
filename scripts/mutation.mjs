@@ -166,6 +166,37 @@ function failureLine(output, needle) {
 }
 const passCount = (output) => (strip(output).match(/(\d+)\s+passed/) || [])[1] ?? '?'
 
+/* Validate every selected patch BEFORE touching anything.
+ *
+ * The first run of this runner lost twelve of twenty results to one bad patch:
+ * a replacement of `''`, which applied fine and then matched 24,385 times on the
+ * way back. The restore threw, the file stayed mutated, and every mutation after
+ * it was judged against a poisoned tree — reported as NOT RESTORED and FAILED
+ * FOR THE WRONG REASON, which are both true and neither of which is about the
+ * mutation they were filed under. A ledger is checked in one pass now, and the
+ * run refuses to start if any entry cannot make the round trip. */
+const invalid = []
+for (const m of selected) {
+  const path = join(TREE, m.patch.file)
+  const text = readFileSync(path, 'utf8')
+  const anchors = text.split(m.patch.from).length - 1
+  if (anchors !== 1) { invalid.push(`${m.id}: anchor occurs ${anchors} times in ${m.patch.file}, expected 1`); continue }
+  const after = text.replace(m.patch.from, m.patch.to)
+  if (after === text) { invalid.push(`${m.id}: the patch is a no-op — it would not change ${m.patch.file}`); continue }
+  const back = after.split(m.patch.to).length - 1
+  if (back !== 1) invalid.push(`${m.id}: the replacement occurs ${back} times after applying, so it cannot be reversed`)
+}
+if (invalid.length) {
+  console.error('Refusing to run: these patches cannot make the round trip.\n')
+  for (const line of invalid) console.error(`  ${line}`)
+  console.error('\nEvery entry is checked before ANY is applied, because one unreversible patch')
+  console.error('strands a mutated file and turns every later result into a verdict about that,')
+  console.error('not about the mutation it is filed under.')
+  if (!keep) rmSync(TREE, { recursive: true, force: true })
+  process.exit(2)
+}
+console.log(`${selected.length} patches make the round trip.\n`)
+
 console.log('building the baseline in the isolated tree...')
 if (!build()) {
   console.error('The baseline build fails in the isolated tree. Nothing below would mean anything.')
@@ -201,6 +232,15 @@ for (const m of selected) {
     applied = false
     build()
     const restoredHash = bundleHash()
+    /* A tree that did not come back is not a tree anything else can be judged in.
+       Stop here rather than report eleven more verdicts about the wrong file. */
+    if (md5(m.patch.file) !== beforeMd5) {
+      console.log('NOT RESTORED')
+      console.error(`\n${m.id}: ${m.patch.file} did not return to md5 ${beforeMd5}. Aborting: every`)
+      console.error('later result would be a verdict about this file, not about its own mutation.')
+      if (!keep) rmSync(TREE, { recursive: true, force: true })
+      process.exit(2)
+    }
 
     const covered = m.name
     const verdict = base.failed
@@ -240,8 +280,12 @@ for (const m of selected) {
       try {
         apply(m, false)
         build()
-      } catch {
-        /* isolated tree, discarded below */
+      } catch (restoreErr) {
+        console.log(`ERROR  ${err.message}`)
+        console.error(`\n${m.id}: could not restore ${m.patch.file} (${restoreErr.message}). Aborting:`)
+        console.error('a mutated file left in place makes every later verdict a statement about it.')
+        if (!keep) rmSync(TREE, { recursive: true, force: true })
+        process.exit(2)
       }
     }
     results.push({ id: m.id, verdict: `ERROR: ${err.message}` })
