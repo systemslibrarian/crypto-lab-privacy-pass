@@ -30,7 +30,7 @@ export const VERDICT_WORDS = [
  *
  * THE UNIT SET WAS WIDENED ON 2026-09-30, and what it did NOT gain is the part worth reading.
  * It accepted only byte, bit, count and duration units under a second, so a page could render
- * "1,380 CPU-years", "2.3 days" or "$13 trillion" and the rule saw no measurement at all. A
+ * "1,380 CPU core-years", "2.3 days" or "$13 trillion" and the rule saw no measurement at all. A
  * fleet survey found 248 COMPUTED figures in those forms across 56 labs — and 1,005 literal
  * ones, four for every computed one, which is why this was widened here rather than rolled out.
  *
