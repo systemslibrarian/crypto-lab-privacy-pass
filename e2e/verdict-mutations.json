@@ -45,7 +45,7 @@
             "test": "an unpublished issuer key aborts issuance, and the token a careless client keeps is refused"
           },
           "kills": "expectVerdict(page, 'dleq', { text: 'DLEQ PROOF · REJECTED AS DESIGNED', result: 'good' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/oprf/voprf.ts md5 142a1828adbf -> 3a8bc6fd7a4a; bundle b1a83f8a783f -> 7776d6a08d4d -> b1a83f8a783f. Mutated run FAILED naming \"dleq\": Error: verdict \"dleq\" text",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/oprf/voprf.ts md5 142a1828adbf -> 3a8bc6fd7a4a; bundle b1a83f8a783f -> 7776d6a08d4d -> b1a83f8a783f. Mutated run FAILED naming \"dleq\": Error: verdict \"dleq\" text",
           "patch": {
             "file": "src/oprf/voprf.ts",
             "from": "  return challenge(issuerPublicKey, m, z, a, b) === proof.c\n}",
@@ -61,7 +61,7 @@
             "test": "valid proofs under client-specific keys redeem and reveal partitioning"
           },
           "kills": "expectVerdict(page, 'dleq', { text: 'DLEQ PROOFS · ALL VERIFIED', result: 'good' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 8222c8d2d8d9; bundle b1a83f8a783f -> 41f51a2496ed -> b1a83f8a783f. Mutated run FAILED naming \"dleq\": Error: verdict \"dleq\" text",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 8222c8d2d8d9; bundle b1a83f8a783f -> 41f51a2496ed -> b1a83f8a783f. Mutated run FAILED naming \"dleq\": Error: verdict \"dleq\" text",
           "patch": {
             "file": "src/main.ts",
             "from": "        return { client, issuer: clientIssuer, issuance: new Client().issue(clientIssuer, challenge), origin: new Origin() }",
@@ -82,7 +82,7 @@
             "test": "a redeemed token cannot be replayed"
           },
           "kills": "expectVerdict(page, 'redemption', { text: 'REDEMPTION · REFUSED', result: 'good' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/pass/privacy-pass.ts md5 b62b91b22af8 -> c233dd2f2273; bundle b1a83f8a783f -> 7beda1947cdd -> b1a83f8a783f. Mutated run FAILED naming \"redemption\": Error: verdict \"redemption\" text",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/pass/privacy-pass.ts md5 b62b91b22af8 -> c233dd2f2273; bundle b1a83f8a783f -> 7beda1947cdd -> b1a83f8a783f. Mutated run FAILED naming \"redemption\": Error: verdict \"redemption\" text",
           "patch": {
             "file": "src/pass/privacy-pass.ts",
             "from": "    this.spent.add(nonceId)\n    return { ok: true,",
@@ -98,7 +98,7 @@
             "test": "valid proofs under client-specific keys redeem and reveal partitioning"
           },
           "kills": "expectVerdict(page, 'redemption', { text: 'REDEMPTIONS · ALL VERIFIED', result: 'good' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 3592e52f16eb; bundle b1a83f8a783f -> 550613b81701 -> b1a83f8a783f. Mutated run FAILED naming \"redemption\": Error: verdict \"redemption\" text",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 3592e52f16eb; bundle b1a83f8a783f -> 550613b81701 -> b1a83f8a783f. Mutated run FAILED naming \"redemption\": Error: verdict \"redemption\" text",
           "patch": {
             "file": "src/main.ts",
             "from": "    const allVerified = results.every(({ result }) => result.ok)",
@@ -119,7 +119,7 @@
             "test": "removing blinding produces an explicit link alarm"
           },
           "kills": "expectVerdict(page, 'linkage', { text: 'COLLUSION CHECK · LINKED: BLINDING WAS REMOVED', result: 'alarm' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/pass/privacy-pass.ts md5 b62b91b22af8 -> 476d7bb8961f; bundle b1a83f8a783f -> e028d36a8073 -> b1a83f8a783f. Mutated run FAILED naming \"linkage\": Error: verdict \"linkage\" text",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/pass/privacy-pass.ts md5 b62b91b22af8 -> 476d7bb8961f; bundle b1a83f8a783f -> e028d36a8073 -> b1a83f8a783f. Mutated run FAILED naming \"linkage\": Error: verdict \"linkage\" text",
           "patch": {
             "file": "src/pass/privacy-pass.ts",
             "from": "  hashToGroup(issuance.input).equals(issuance.request.blinded)",
@@ -135,7 +135,7 @@
             "test": "valid proofs under client-specific keys redeem and reveal partitioning"
           },
           "kills": "expectVerdict(page, 'linkage', { text: 'PROOFS VERIFIED · AND PARTITIONED', result: 'alarm' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 089abfb2624a; bundle b1a83f8a783f -> 062e7476b33f -> b1a83f8a783f. Mutated run FAILED naming \"linkage\": Error: verdict \"linkage\" text",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 089abfb2624a; bundle b1a83f8a783f -> 062e7476b33f -> b1a83f8a783f. Mutated run FAILED naming \"linkage\": Error: verdict \"linkage\" text",
           "patch": {
             "file": "src/main.ts",
             "from": "    const buckets = new Set(partitioned.map(({ issuance: clientIssuance }) => hex(clientIssuance.token.tokenKeyId)))",
@@ -156,7 +156,7 @@
             "test": "valid proofs under client-specific keys redeem and reveal partitioning"
           },
           "kills": "expectVerdict(page, 'link-map', { text: PARTITION_ROSTER.slice(0, clients).map((client) => `${client} key bucket`).join(' · '), result: 'alarm' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 381f5a5b0649; bundle b1a83f8a783f -> da46209b367c -> b1a83f8a783f. Mutated run FAILED naming \"link-map\": Error: verdict \"link-map\" data-result",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 381f5a5b0649; bundle b1a83f8a783f -> da46209b367c -> b1a83f8a783f. Mutated run FAILED naming \"link-map\": Error: verdict \"link-map\" data-result",
           "patch": {
             "file": "src/main.ts",
             "from": "    setVerdict('#link-map', 'link-map', linked ? 'alarm' : 'good')\n    $('#link-map').setAttribute('aria-label', linked ? `${buckets.size} alarm lines",
@@ -177,7 +177,7 @@
             "test": "removing blinding produces an explicit link alarm"
           },
           "kills": "expectVerdict(page, 'status', { text: 'ALARM: issuer hash-to-group value equals the origin-computable input point.', result: 'alarm' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 2ea640d62e8e; bundle b1a83f8a783f -> af2cea9c7a2c -> b1a83f8a783f. Mutated run FAILED naming \"status\": Error: verdict \"status\" data-result",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 2ea640d62e8e; bundle b1a83f8a783f -> af2cea9c7a2c -> b1a83f8a783f. Mutated run FAILED naming \"status\": Error: verdict \"status\" data-result",
           "patch": {
             "file": "src/main.ts",
             "from": "const status = (text: string, intact = true): void => setVerdict('#status', 'status', intact ? 'good' : 'alarm', text)",
@@ -198,7 +198,7 @@
             "test": "valid proofs under client-specific keys redeem and reveal partitioning"
           },
           "kills": "expectVerdict(page, 'negative-claim', { text: 'does not show it published the same key to every client', result: 'alarm' })",
-          "observed": "isolated re-run 2026-09-22 at 1ca07ba, `git archive` into a private tree with node_modules symlinked and CI=1 on port 4684 so Playwright started its own server: baseline 17 passed in that same tree, unmutated src/main.ts md5 4e59844fd5d349e5d76060c911ddf2fb bundle index-KKXo5gXL.js; mutated c4672205f4310a2a2fad216e08fa2363 bundle index-Bb8e65Jh.js, so the patch reached the built artifact. 1 failed / 11 passed (the five verdict-coverage tests do not run once their `claims` dependency project fails). Verbatim: \"Error: verdict \"negative-claim\" is not rendered / expect(locator).toBeVisible() failed / Expected: visible / Received: hidden\" at e2e/claims.spec.ts in \"valid proofs under client-specific keys redeem and reveal partitioning\". The partition fixture rendered every verdict green with its §4.1d limitation absent.",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 5111be92e236; bundle b1a83f8a783f -> 115d9e9db914 -> b1a83f8a783f. Mutated run FAILED naming \"negative-claim\": Error: verdict \"negative-claim\" is not rendered",
           "patch": {
             "file": "src/main.ts",
             "from": "      $('#negative-claim').removeAttribute('hidden')\n",
@@ -221,7 +221,7 @@
             "test": "valid proofs under client-specific keys redeem and reveal partitioning"
           },
           "kills": "expectClaim(page, 'computed-links', { value: buckets })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 c3b9ab86e10a -> 1dc03ca67c47; bundle b1a83f8a783f -> cb7a5488f54c -> 9b5686252595. VERDICT FAILED FOR THE WRONG REASON: Error: verdict \"negative-claim\" is not rendered",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 4b9bd3d335ae; bundle b1a83f8a783f -> 28fd3698987d -> b1a83f8a783f. Mutated run FAILED naming \"computed-links\": Error: claim \"computed-links\" data-value",
           "patch": {
             "file": "src/main.ts",
             "from": "    $('#link-map').innerHTML = linkDiagram(linked ? buckets.size : 0, partitioned.map(({ client }) => `${client} key bucket`))",
@@ -237,7 +237,7 @@
             "test": "valid proofs under client-specific keys redeem and reveal partitioning"
           },
           "kills": "expectClaim(page, 'computed-links', { value: buckets }) on the second pass of the fixture, at four clients",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 c3b9ab86e10a -> 46cb5b1cc1e0; bundle b1a83f8a783f -> ecf7ee874fae -> 9b5686252595. VERDICT FAILED FOR THE WRONG REASON: Error: verdict \"negative-claim\" is not rendered",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> a4cb99dc5c46; bundle b1a83f8a783f -> ec09030a214d -> b1a83f8a783f. Mutated run FAILED naming \"computed-links\": Error: claim \"computed-links\" data-value",
           "patch": {
             "file": "src/main.ts",
             "from": "    $('#link-map').innerHTML = linkDiagram(linked ? buckets.size : 0, partitioned.map(({ client }) => `${client} key bucket`))",
@@ -258,7 +258,7 @@
             "test": "private blind issuance redeems but gives the colluding ledgers no match"
           },
           "kills": "expectClaim(page, 'kat-count', { value: KAT_VECTORS, text: /^8 vectors: 3 RFC 9497 [^+]+\\+ 5 RFC 9578\\b/ })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 c3b9ab86e10a -> 6748567ca9f6; bundle b1a83f8a783f -> d2c8037b8bb9 -> 9b5686252595. VERDICT NOT RESTORED: Error: claim \"kat-count\" data-value",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> ba707611d7c4; bundle b1a83f8a783f -> 40776c50b013 -> b1a83f8a783f. Mutated run FAILED naming \"kat-count\": Error: claim \"kat-count\" data-value",
           "patch": {
             "file": "src/main.ts",
             "from": "  const katTotal = __RFC9497_VECTOR_COUNT__ + __RFC9578_VECTOR_COUNT__",
@@ -274,7 +274,7 @@
             "test": "private blind issuance redeems but gives the colluding ledgers no match"
           },
           "kills": "expectClaim(page, 'kat-count', { value: KAT_VECTORS, text: /^8 vectors: 3 RFC 9497 .../ }) -- both halves, because both are now derived from the corpus",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/kat/rfc9497.ts md5 7247e0f7d900 -> 4233cdbc1920; bundle b1a83f8a783f -> c8b2ed68aff3 -> 9b5686252595. VERDICT NOT RESTORED: Error: claim \"kat-count\" data-value",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/kat/rfc9497.ts md5 7247e0f7d900 -> 4233cdbc1920; bundle b1a83f8a783f -> 360e4100dd8d -> b1a83f8a783f. Mutated run FAILED naming \"kat-count\": Error: claim \"kat-count\" data-value",
           "patch": {
             "file": "src/kat/rfc9497.ts",
             "from": "export const RFC9497_VECTOR_COUNT = singleVectors.length + batchVectors.length",
@@ -295,7 +295,7 @@
             "test": "private blind issuance redeems but gives the colluding ledgers no match"
           },
           "kills": "expectClaim(page, 'published-key', { value: bytes, text: 'bytes' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 c3b9ab86e10a -> f6a8b7d472c0; bundle b1a83f8a783f -> 679252b0a354 -> 9b5686252595. VERDICT NOT RESTORED: Error: claim \"published-key\" data-value",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 4c4fe6119ac4; bundle b1a83f8a783f -> 9a6d14e9d681 -> b1a83f8a783f. Mutated run FAILED naming \"published-key\": Error: claim \"published-key\" data-value",
           "patch": {
             "file": "src/main.ts",
             "from": "  const publishedKey = wire(pointBytes(issuer.publicKey))",
@@ -316,7 +316,7 @@
             "test": "private blind issuance redeems but gives the colluding ledgers no match"
           },
           "kills": "expectClaim(page, 'key-id', { value: bytes, text: 'bytes' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 c3b9ab86e10a -> 49c7fd348f77; bundle b1a83f8a783f -> 7c286b5e3a9b -> 9b5686252595. VERDICT NOT RESTORED: Error: claim \"key-id\" data-value",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 7db241fe6002; bundle b1a83f8a783f -> 7b639dd90855 -> b1a83f8a783f. Mutated run FAILED naming \"key-id\": Error: claim \"key-id\" data-value",
           "patch": {
             "file": "src/main.ts",
             "from": "  const tokenKeyId = wire(keyId(issuer.publicKey))",
@@ -337,7 +337,7 @@
             "test": "private blind issuance redeems but gives the colluding ledgers no match"
           },
           "kills": "expectClaim(page, 'wire-request', { value: bytes, text: 'bytes' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/pass/privacy-pass.ts md5 b62b91b22af8 -> e1e5ca6f5a98; bundle b1a83f8a783f -> 940722859444 -> 9b5686252595. VERDICT NOT RESTORED: Error: claim \"wire-request\" data-value",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/pass/privacy-pass.ts md5 b62b91b22af8 -> e1e5ca6f5a98; bundle b1a83f8a783f -> a33d74fcd820 -> b1a83f8a783f. Mutated run FAILED naming \"wire-request\": Error: claim \"wire-request\" data-value",
           "patch": {
             "file": "src/pass/privacy-pass.ts",
             "from": "  concatBytes(TOKEN_TYPE, new Uint8Array([request.truncatedTokenKeyId]), pointBytes(request.blinded))",
@@ -358,7 +358,7 @@
             "test": "private blind issuance redeems but gives the colluding ledgers no match"
           },
           "kills": "expectClaim(page, 'wire-response', { value: bytes, text: 'bytes' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/pass/privacy-pass.ts md5 b62b91b22af8 -> a57826fc33f2; bundle b1a83f8a783f -> 547d0d611aca -> 9b5686252595. VERDICT NOT RESTORED: Error: claim \"wire-response\" data-value",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/pass/privacy-pass.ts md5 b62b91b22af8 -> a57826fc33f2; bundle b1a83f8a783f -> 30bdfd8d63db -> b1a83f8a783f. Mutated run FAILED naming \"wire-response\": Error: claim \"wire-response\" data-value",
           "patch": {
             "file": "src/pass/privacy-pass.ts",
             "from": "  concatBytes(pointBytes(response.evaluated), scalarBytes(response.proof.c), scalarBytes(response.proof.s))",
@@ -379,7 +379,7 @@
             "test": "private blind issuance redeems but gives the colluding ledgers no match"
           },
           "kills": "expectClaim(page, 'wire-token', { value: bytes, text: 'bytes' })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/pass/privacy-pass.ts md5 b62b91b22af8 -> aa9ab094f894; bundle b1a83f8a783f -> 7e8a93e71e80 -> 9b5686252595. VERDICT NOT RESTORED: Error: claim \"wire-token\" data-value",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/pass/privacy-pass.ts md5 b62b91b22af8 -> aa9ab094f894; bundle b1a83f8a783f -> ccfa1bbb765d -> b1a83f8a783f. Mutated run FAILED naming \"wire-token\": Error: claim \"wire-token\" data-value",
           "patch": {
             "file": "src/pass/privacy-pass.ts",
             "from": "  concatBytes(TOKEN_TYPE, token.nonce, token.challengeDigest, token.tokenKeyId, token.authenticator)",
@@ -400,7 +400,7 @@
             "test": "private blind issuance redeems but gives the colluding ledgers no match"
           },
           "kills": "expectClaim(page, 'truncated-key-id', { value: Number.parseInt(keyIdHex.slice(-2), 16) })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/oprf/voprf.ts md5 142a1828adbf -> 24db4dbcad7f; bundle b1a83f8a783f -> 6148b9e41af3 -> 9b5686252595. VERDICT NOT RESTORED: Error: claim \"truncated-key-id\" data-value",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/oprf/voprf.ts md5 142a1828adbf -> 24db4dbcad7f; bundle b1a83f8a783f -> 0e8f6f0ffd88 -> b1a83f8a783f. Mutated run FAILED naming \"truncated-key-id\": Error: claim \"truncated-key-id\" data-value",
           "patch": {
             "file": "src/oprf/voprf.ts",
             "from": "keyId(issuerPublicKey).at(-1)!",
@@ -421,7 +421,7 @@
             "test": "removing blinding produces an explicit link alarm"
           },
           "kills": "expectClaim(page, 'blind-scalar', { value: 1 })",
-          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 11e5f4f, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 c3b9ab86e10a -> ec452445998e; bundle b1a83f8a783f -> 76a7bcd512f8 -> 9b5686252595. VERDICT NOT RESTORED: Error: claim \"blind-scalar\" data-value",
+          "observed": "re-derived 2026-09-30 by scripts/mutation.mjs at 7dc41e0, in an isolated `git archive HEAD` tree with node_modules symlinked and CI=1, so Playwright built and served the mutated bundle itself. Baseline (unmutated, same session): 1 passed. src/main.ts md5 45147fd4bf0f -> 4a70701251fd; bundle b1a83f8a783f -> 2dd09e51d450 -> b1a83f8a783f. Mutated run FAILED naming \"blind-scalar\": Error: claim \"blind-scalar\" data-value",
           "patch": {
             "file": "src/main.ts",
             "from": "      const blindScalar = mode === 'unblinded' ? 1n : undefined",
