@@ -41,7 +41,7 @@ The paper's mitigations are frequent key rotation in the short term, larger keys
 ## How to Run Locally
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -54,11 +54,11 @@ See the Crypto Lab [Blind Sign](https://crypto-lab.systemslibrarian.dev/) and [R
 ```bash
 npm test
 npm run build
-npx playwright install --with-deps chromium
+npx playwright install chromium
 npm run test:a11y
 ```
 
-The unit suite has 16 tests. It iterates the vector corpus in `src/kat/`: 3 RFC 9497 Appendix A.4.2 P-384 VOPRF vectors and 5 RFC 9578 Appendix A.1 type-`0x0001` issuance vectors. `vite.config.ts` measures that corpus and defines the counts the page prints, and **the gate re-counts the same corpus from `e2e/claims.spec.ts` and compares each printed part to it** — the total and both halves. That second half is what the sentence here used to assume: until 2026-09-22 the oracle checked only that the total the page published equalled the two numbers the page itself printed, which is true of any pair of numbers it chooses to print, so a literal in `src/kat/` survived that check even when it was WRONG — a literal 4 rendered "9 vectors: 4 RFC 9497 … + 5 RFC 9578" over three RFC 9497 vectors with every test green. Any count that disagrees with the vectors on disk now fails (`M20`). The unit suite also covers complete wire parsing and serialization, batch proofs, value-derived linkability, proof failures, and replay rejection. The Playwright gate runs 17 tests from 16 declarations — the overflow check runs at two viewports — covering WCAG 2.1 A/AA on every reachable protocol state, arithmetic palette contrast, responsive overflow, complete rendered wire lengths, all three broken modes, visual link counts at two fixture sizes, the fail-closed abort, replay, verdict retirement, `[hidden]` behavior, and verdict coverage. The implementation follows [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497), [RFC 9578](https://www.rfc-editor.org/rfc/rfc9578), and [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380).
+The unit suite has 16 tests. It iterates the vector corpus in `src/kat/`: 3 RFC 9497 Appendix A.4.2 P-384 VOPRF vectors and 5 RFC 9578 Appendix A.1 type-`0x0001` issuance vectors. `vite.config.ts` measures that corpus and defines the counts the page prints, and **the gate re-counts the same corpus from `e2e/claims.spec.ts` and compares each printed part to it** — the total and both halves. That second half is what the sentence here used to assume: until 2026-09-22 the oracle checked only that the total the page published equalled the two numbers the page itself printed, which is true of any pair of numbers it chooses to print, so a literal in `src/kat/` survived that check even when it was WRONG — a literal 4 rendered "9 vectors: 4 RFC 9497 … + 5 RFC 9578" over three RFC 9497 vectors with every test green. Any count that disagrees with the vectors on disk now fails (`M20`). The unit suite also covers strict request, response, and token parsing and serialization; the live Client, Issuer, and Origin exchange those byte encodings rather than sharing protocol objects. It also covers batch proofs, value-derived linkability, proof failures, and replay rejection. The Playwright gate runs 18 tests from 17 declarations — the overflow check runs at two viewports — covering WCAG 2.1 A/AA on every reachable protocol state, arithmetic palette contrast, responsive overflow, complete rendered wire lengths, all three broken modes, visual link counts at two fixture sizes, the fail-closed abort, replay, verdict retirement, `[hidden]` behavior, and verdict coverage. The implementation follows [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497), [RFC 9578](https://www.rfc-editor.org/rfc/rfc9578), and [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380).
 
 ## Verdict Coverage
 

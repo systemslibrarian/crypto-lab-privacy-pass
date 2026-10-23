@@ -25,6 +25,10 @@ test('production page has no WCAG 2.1 A/AA violations', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Privacy Pass' })).toBeVisible()
   await expect(page.locator('#app')).not.toBeEmpty()
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true)
+  await page.keyboard.press('Tab')
+  await expect(page.locator('.skip-link')).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('#app')).toBeFocused()
   await scan(page, 'default')
 })
 
