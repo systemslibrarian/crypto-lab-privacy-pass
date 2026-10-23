@@ -127,7 +127,7 @@ function issue(): void {
     } else if (mode === 'substituted') {
       const rogue = new Issuer(0xfeedfacecafebeef0123456789abcdefn)
       const careless = new Client().issue(rogue, challenge)
-      skipped = { issuance: careless, verdict: new Origin().redeem(careless.token, challenge, issuer) }
+      skipped = { issuance: careless, verdict: new Origin().redeem(serializeToken(careless.token), challenge, issuer) }
       new Client().issue(rogue, challenge, { verifyKey: issuer.publicKey })
       setVerdict('#dleq', 'verdict', 'alarm', 'DLEQ PROOF · ACCEPTED AN UNPUBLISHED KEY')
       $('#client-detail').textContent = 'BROKEN: the client finalized against a key it was never told to trust.'
@@ -154,23 +154,36 @@ function issue(): void {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    setVerdict('#dleq', 'verdict', 'good', 'DLEQ PROOF · REJECTED AS DESIGNED')
-    $('#issuer-ledger').innerHTML = skipped
+    const designedRejection = mode === 'substituted' && message.startsWith('DLEQ proof verification failed')
+    setVerdict(
+      '#dleq',
+      'verdict',
+      designedRejection ? 'good' : 'alarm',
+      designedRejection ? 'DLEQ PROOF · REJECTED AS DESIGNED' : 'ISSUANCE · UNEXPECTED ABORT',
+    )
+    $('#issuer-ledger').innerHTML = designedRejection && skipped
       ? `<p><b>BROKEN unpublished-key mode</b></p><p>The issuer answered with a key other than the one this client was told to trust.</p><code>trusted key id: ${short(keyId(issuer.publicKey))}</code><code>answered under: ${short(skipped.issuance.token.tokenKeyId)}</code>`
       : '<p><b>Issuance aborted</b></p><p>The client refused to finalize a token.</p>'
     $('#client-detail').textContent = 'Client aborted before finalization.'
-    $('#issuer-detail').textContent = 'BROKEN: the evaluation carries a valid proof, but under an unpublished key.'
-    if (skipped) {
+    $('#issuer-detail').textContent = designedRejection
+      ? 'BROKEN: the evaluation carries a valid proof, but under an unpublished key.'
+      : 'The issuance path stopped before a token was finalized.'
+    if (designedRejection && skipped) {
       $('#origin-ledger').innerHTML = `<p><b>A client that skipped the proof check</b> · finalized a token anyway</p><code>token key id: ${short(skipped.issuance.token.tokenKeyId)}</code><p>${skipped.verdict.reason}</p>`
       $('#origin-detail').textContent = skipped.verdict.reason
       setVerdict('#redeem-verdict', 'verdict', skipped.verdict.ok ? 'alarm' : 'good', `SKIPPED-CHECK TOKEN · ${skipped.verdict.ok ? 'ACCEPTED' : 'REFUSED'}`)
     }
-    status(`${message}. A careful client receives no token.`, true)
+    status(
+      designedRejection
+        ? `${message}. A careful client receives no token.`
+        : `UNEXPECTED ISSUANCE FAILURE: ${message}`,
+      designedRejection,
+    )
   }
 }
 function redeem(): void {
   if (partitioned.length) {
-    const results = partitioned.map((entry) => ({ ...entry, result: entry.origin.redeem(entry.issuance.token, challenge, entry.issuer) }))
+    const results = partitioned.map((entry) => ({ ...entry, result: entry.origin.redeem(serializeToken(entry.issuance.token), challenge, entry.issuer) }))
     $('#origin-ledger').innerHTML = results.map(({ client, issuance: clientIssuance, result }) => `<p><b>${client}</b> · ${result.ok ? 'verified' : 'refused'}</p><code>token key id: ${short(clientIssuance.token.tokenKeyId)}</code>`).join('')
     const allVerified = results.every(({ result }) => result.ok)
     setVerdict('#redeem-verdict', 'verdict', allVerified ? 'good' : 'alarm', `REDEMPTIONS · ${allVerified ? 'ALL VERIFIED' : 'REFUSED'}`)
@@ -183,7 +196,7 @@ function redeem(): void {
   // every later presentation of the same token must be refused. Both of those are the origin
   // working, so both render green; the alarm is reserved for the origin disagreeing with that.
   const expectedOk = redemptions === 0
-  const result = origin.redeem(issuance.token, challenge, issuer)
+  const result = origin.redeem(serializeToken(issuance.token), challenge, issuer)
   redemptions += 1
   const intact = result.ok === expectedOk
   $('#origin-ledger').innerHTML = `<p><b>${result.ok ? 'Token redeemed' : 'Token refused'}</b></p><code>nonce: ${short(issuance.token.nonce)}</code><code>authenticator: ${short(issuance.token.authenticator)}</code><p>${result.reason}</p>`

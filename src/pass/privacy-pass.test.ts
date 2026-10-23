@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { p384 } from '@noble/curves/nist.js'
 import { hexToBytes } from '@noble/hashes/utils.js'
 import { blind, evaluate, finalize, pointBytes, proveDleq, publicKey, verifyDleq } from '../oprf/voprf.js'
-import { Client, deserializeResponse, deserializeToken, Issuer, Origin, issuerCanLink, serializeChallenge, serializeRequest, serializeResponse, serializeToken, tokenInput } from './privacy-pass.js'
+import { Client, deserializeRequest, deserializeResponse, deserializeToken, Issuer, Origin, issuerCanLink, serializeChallenge, serializeRequest, serializeResponse, serializeToken, tokenInput } from './privacy-pass.js'
 
 const challenge = { issuerName: 'issuer.example', originInfo: 'origin.example', redemptionContext: new Uint8Array() }
 const issuer = () => new Issuer(0x123456789abcdef123456789abcdef123456789abcdef123456789abcdefn)
@@ -39,17 +39,23 @@ describe('RFC 9578 type 0x0001 teaching implementation', () => {
     expect(serializeRequest(request)).toEqual(hexToBytes(expectedRequest))
   })
 
-  it('serializes complete response and token wire structures', () => {
+  it('strictly parses complete request, response, and token wire structures', () => {
     const activeIssuer = issuer()
     const issuance = new Client().issue(activeIssuer, challenge, { blindScalar: 17n, nonce: new Uint8Array(32).fill(7) })
     expect(serializeRequest(issuance.request)).toHaveLength(52)
     expect(serializeResponse(issuance.response)).toHaveLength(145)
     expect(serializeToken(issuance.token)).toHaveLength(146)
     expect(serializeToken(issuance.token).slice(0, 2)).toEqual(new Uint8Array([0, 1]))
+    expect(serializeRequest(deserializeRequest(serializeRequest(issuance.request)))).toEqual(serializeRequest(issuance.request))
     expect(serializeResponse(deserializeResponse(serializeResponse(issuance.response)))).toEqual(serializeResponse(issuance.response))
     expect(serializeToken(deserializeToken(serializeToken(issuance.token)))).toEqual(serializeToken(issuance.token))
+    expect(() => deserializeRequest(new Uint8Array(51))).toThrow('exactly 52 bytes')
+    const wrongRequestType = serializeRequest(issuance.request)
+    wrongRequestType[1] = 2
+    expect(() => deserializeRequest(wrongRequestType)).toThrow('Unsupported token type')
     expect(() => deserializeResponse(new Uint8Array(144))).toThrow('exactly 145 bytes')
     expect(() => deserializeToken(new Uint8Array(145))).toThrow('exactly 146 bytes')
+    expect(new Origin().redeem(new Uint8Array(145), challenge, activeIssuer)).toMatchObject({ ok: false, reason: expect.stringContaining('Malformed token') })
   })
 
   it('derives ledger linkability from the request point instead of mode state', () => {
@@ -61,7 +67,7 @@ describe('RFC 9578 type 0x0001 teaching implementation', () => {
   it('blindly issues a token the origin can privately verify', () => {
     const activeIssuer = issuer()
     const issuance = new Client().issue(activeIssuer, challenge, { blindScalar: 17n })
-    expect(new Origin().redeem(issuance.token, challenge, activeIssuer)).toMatchObject({ ok: true })
+    expect(new Origin().redeem(serializeToken(issuance.token), challenge, activeIssuer)).toMatchObject({ ok: true })
     expect(issuance.token.tokenKeyId).toHaveLength(32)
     expect(activeIssuer.received[0].blinded.equals(publicKey(1n))).toBe(false)
   })
@@ -79,7 +85,8 @@ describe('RFC 9578 type 0x0001 teaching implementation', () => {
     const activeIssuer = issuer()
     const token = new Client().issue(activeIssuer, challenge).token
     const origin = new Origin()
-    expect(origin.redeem(token, challenge, activeIssuer).ok).toBe(true)
-    expect(origin.redeem(token, challenge, activeIssuer)).toMatchObject({ ok: false, reason: expect.stringContaining('Replay refused') })
+    const encodedToken = serializeToken(token)
+    expect(origin.redeem(encodedToken, challenge, activeIssuer).ok).toBe(true)
+    expect(origin.redeem(encodedToken, challenge, activeIssuer)).toMatchObject({ ok: false, reason: expect.stringContaining('Replay refused') })
   })
 })
