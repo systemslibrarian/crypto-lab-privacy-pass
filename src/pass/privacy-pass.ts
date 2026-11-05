@@ -33,6 +33,14 @@ export const tokenInput = (nonce: Uint8Array, challenge: Challenge, issuerPublic
   tokenInputFromChallenge(nonce, serializeChallenge(challenge), issuerPublicKey)
 export const serializeRequest = (request: Request): Uint8Array =>
   concatBytes(TOKEN_TYPE, new Uint8Array([request.truncatedTokenKeyId]), pointBytes(request.blinded))
+export const deserializeRequest = (encoded: Uint8Array): Request => {
+  if (encoded.length !== 52) throw new Error('TokenRequest must be exactly 52 bytes')
+  if (!equal(encoded.slice(0, 2), TOKEN_TYPE)) throw new Error('Unsupported token type')
+  return {
+    truncatedTokenKeyId: encoded[2],
+    blinded: pointFromBytes(encoded.slice(3, 52)),
+  }
+}
 export const serializeResponse = (response: Response): Uint8Array =>
   concatBytes(pointBytes(response.evaluated), scalarBytes(response.proof.c), scalarBytes(response.proof.s))
 export const serializeToken = (token: Token): Uint8Array =>
@@ -65,11 +73,12 @@ export class Issuer {
   readonly received: Request[] = []
   constructor(readonly secretKey: bigint) { this.publicKey = publicKey(secretKey) }
 
-  respond(request: Request): Response {
+  respond(encodedRequest: Uint8Array): Uint8Array {
+    const request = deserializeRequest(encodedRequest)
     if (request.truncatedTokenKeyId !== truncatedKeyId(this.publicKey)) throw new Error('Truncated token key id mismatch')
     this.received.push(request)
     const evaluated = evaluate(this.secretKey, request.blinded)
-    return { evaluated, proof: proveDleq(this.secretKey, request.blinded, evaluated) }
+    return serializeResponse({ evaluated, proof: proveDleq(this.secretKey, request.blinded, evaluated) })
   }
 }
 
@@ -80,7 +89,7 @@ export class Client {
     const input = tokenInput(nonce, challenge, issuer.publicKey)
     const requestBlind = blind(input, options.blindScalar)
     const request = { blinded: requestBlind.blinded, truncatedTokenKeyId: truncatedKeyId(issuer.publicKey) }
-    const response = issuer.respond(request)
+    const response = deserializeResponse(issuer.respond(serializeRequest(request)))
     if (options.tamperProof) response.proof = { ...response.proof, s: response.proof.s + 1n }
     if (!verifyDleq(options.verifyKey ?? issuer.publicKey, request.blinded, response.evaluated, response.proof)) {
       throw new Error('DLEQ proof verification failed: no token was finalized')
@@ -101,7 +110,16 @@ export class Client {
 
 export class Origin {
   private readonly spent = new Set<string>()
-  redeem(token: Token, challenge: Challenge, issuer: Issuer): { ok: boolean; reason: string } {
+  redeem(encodedToken: Uint8Array, challenge: Challenge, issuer: Issuer): { ok: boolean; reason: string } {
+    let token: Token
+    try {
+      token = deserializeToken(encodedToken)
+    } catch (error) {
+      return {
+        ok: false,
+        reason: `Malformed token: ${error instanceof Error ? error.message : 'deserialization failed'}`,
+      }
+    }
     if (!equal(token.tokenKeyId, keyId(issuer.publicKey))) return { ok: false, reason: 'Token key id does not match the issuer public key' }
     if (!equal(token.challengeDigest, challengeDigest(challenge))) return { ok: false, reason: 'Token challenge digest does not match this origin challenge' }
     const nonceId = Array.from(token.nonce).join(',')
