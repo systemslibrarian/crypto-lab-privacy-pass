@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { AxeBuilder } from '@axe-core/playwright'
 import { contrastRatio } from './contrast.js'
 import { auditNonText } from './nontext.js'
+import { auditControlNames, formatControlNameFailures } from './control-names.js'
 
 const tags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
@@ -17,6 +18,10 @@ async function scan(page: import('@playwright/test').Page, label: string): Promi
     return ownsText && Number.parseFloat(getComputedStyle(element).opacity) === 0
   }).map((element) => element.id || element.className || element.tagName))
   expect(invisibleText, `${label}: visible text at opacity zero`).toEqual([])
+  // axe's `label` rule accepts a bare `placeholder` as an accessible name, so a
+  // deleted label can leave this gate green. See `control-names.ts`.
+  const unnamed = formatControlNameFailures(await auditControlNames(page))
+  expect(unnamed, `${label}: form controls named only by placeholder/title`).toEqual([])
 }
 
 test('production page has no WCAG 2.1 A/AA violations', async ({ page }) => {
