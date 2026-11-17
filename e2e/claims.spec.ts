@@ -90,6 +90,17 @@ test('Blind RSA panel renders every manifest claim and source boundary', async (
     await expect(panel, `${claim.id} from ${claim.source}`).toContainText(claim.text)
   }
   await expect(panel.locator('p').filter({ hasText: 'At 2048 bits' })).toContainText('290')
+  /* The 2.3-day figure is the PAPER'S and does not follow from the paper's own other
+     number: 17 million years on one device divided by 2.3 billion devices is about 2.7
+     days. Shea et al. §7.2 reads "Parallelized across the 2.3 billion active Apple
+     devices ... it would take 2.3 days to complete 2^43 queries at a rate of one per
+     minute per device", so the page quotes 2.3 and says in the same breath that it is
+     quoted rather than recomputed. Neither half may be dropped. */
+  const scale = panel.locator('p').filter({ hasText: 'At 2048 bits' })
+  await expect(scale).toContainText('about 17 million years for one device')
+  await expect(scale).toContainText('the paper then gives 2.3 days')
+  await expect(scale).toContainText('Both figures are quoted as published')
+  await expect(scale).toContainText('nearer 2.7 days')
   await expect(panel).toContainText('VOPRF path is not an RSA oracle')
   await expect(panel.getByRole('link', { name: /RSA Forge.*eNFS section/ })).toHaveAttribute('href', 'https://systemslibrarian.github.io/crypto-lab-rsa-forge/#oracle-without-factoring')
 })
