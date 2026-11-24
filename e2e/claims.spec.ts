@@ -78,7 +78,7 @@ test('private blind issuance redeems but gives the colluding ledgers no match', 
   await expectVerdict(page, 'redemption', { text: 'REDEMPTION · VERIFIED', result: 'good' })
   await page.getByRole('button', { name: '3. Try to link ledgers' }).click()
   await expectVerdict(page, 'linkage', { text: 'COLLUSION CHECK · NO COMPUTABLE MATCH', result: 'good' })
-  await expectVerdict(page, 'link-map', { text: 'no equality-testable values cross the ledgers', result: 'good' })
+  await expectVerdict(page, 'link-map', { text: 'no matching token input point', result: 'good' })
   await expectClaim(page, 'computed-links', { value: 0 })
   await expect(page.locator('#link-map .computed-link')).toHaveCount(0)
 })
@@ -113,6 +113,8 @@ test('removing blinding produces an explicit link alarm', async ({ page }) => {
   // can be asserted instead of assumed.
   await expectClaim(page, 'blind-scalar', { value: 1 })
   const issuerPoint = (await page.locator('#issuer-ledger code').textContent())?.replace(/^blinded element: /, '')
+  await expect(page.locator('#link')).toBeDisabled()
+  await page.locator('#redeem').click()
   await page.getByRole('button', { name: '3. Try to link ledgers' }).click()
   await expectVerdict(page, 'linkage', { text: 'COLLUSION CHECK · LINKED: BLINDING WAS REMOVED', result: 'alarm' })
   await expectVerdict(page, 'status', { text: 'ALARM: issuer hash-to-group value equals the origin-computable input point.', result: 'alarm' })
@@ -183,8 +185,8 @@ test('mode changes retire stale results while selecting the same mode is a no-op
   await page.getByLabel('Private issuance').check()
   await expectVerdict(page, 'dleq', { text: 'DLEQ PROOF · VERIFIED', result: 'good' })
   await page.getByLabel(/BROKEN: remove blinding/).check()
-  await expect(page.locator('#issuer-ledger')).toContainText('Prior verdict retired')
-  await expectVerdict(page, 'link-map', { text: 'Prior link result retired after mode change.', result: 'neutral' })
+  await expect(page.locator('#issuer-ledger')).toContainText('No issuance yet')
+  await expectVerdict(page, 'link-map', { text: 'Waiting for a ledger comparison.', result: 'neutral' })
   await expect(page.getByRole('button', { name: '2. Redeem at origin' })).toBeDisabled()
 })
 
@@ -192,4 +194,28 @@ test('[hidden] negative claim does not paint outside its fixture', async ({ page
   const claim = page.locator('#negative-claim')
   await expect(claim).toBeHidden()
   expect(await claim.evaluate((element) => getComputedStyle(element).display)).toBe('none')
+})
+
+test('new issuance, mode and roster changes retire every dependent result', async ({ page }) => {
+  for (const mode of ['private', 'partitioned']) {
+    await page.locator(`input[value="${mode}"]`).check()
+    await page.locator('#issue').click()
+    await expect(page.locator('#link')).toBeDisabled()
+    await expect(page.locator('#replay')).toBeDisabled()
+    await page.locator('#redeem').click()
+    await page.locator('#link').click()
+    await page.locator('#redeem').click()
+    await expect(page.locator('#redeem-verdict')).toContainText('REFUSED')
+    await expect(page.locator('#redeem-verdict')).toHaveAttribute('data-result', 'good')
+    await expect(page.locator('#origin-detail')).toContainText('Replay refused')
+    await page.locator('#issue').click()
+    await expect(page.locator('#redeem-verdict')).toHaveAttribute('data-result', 'neutral')
+    await expect(page.locator('#link-verdict')).toHaveAttribute('data-result', 'neutral')
+    await expect(page.locator('#origin-ledger')).toContainText('No redemption yet')
+  }
+  await page.locator('input[value="3"]').check()
+  await expect(page.locator('#dleq')).toHaveAttribute('data-result', 'neutral')
+  for (const id of ['wire-token', 'wire-request', 'wire-response']) {
+    await expect(page.locator('#' + id)).toHaveAttribute('data-value', '')
+  }
 })

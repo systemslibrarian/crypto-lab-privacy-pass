@@ -57,6 +57,26 @@ const status = (text: string, intact = true): void => setVerdict('#status', 'sta
 // number from the RFC 9578 field list instead of copying it.
 const wire = (value: Uint8Array): { length: number; text: string } => ({ length: value.length, text: `${hex(value)} · ${value.length} bytes` })
 
+function resetRun(): void {
+  issuance = undefined
+  partitioned = []
+  skipped = undefined
+  redemptions = 0
+  for (const id of ['redeem', 'link', 'replay']) $('#'+id).setAttribute('disabled', '')
+  for (const id of ['wire-request', 'wire-response', 'wire-token']) setClaim('#'+id, '', 'No wire value for this run.')
+  $('#issuer-ledger').textContent = 'No issuance yet.'
+  $('#origin-ledger').textContent = 'No redemption yet.'
+  $('#client-detail').textContent = 'Waiting for issuance.'
+  $('#issuer-detail').textContent = 'Waiting for issuance.'
+  $('#origin-detail').textContent = 'Waiting for a token presentation.'
+  setVerdict('#dleq', 'verdict', 'neutral', 'DLEQ PROOF · waiting')
+  setVerdict('#redeem-verdict', 'verdict', 'neutral', 'REDEMPTION · waiting')
+  setVerdict('#link-verdict', 'verdict', 'neutral', 'COLLUSION CHECK · waiting')
+  setVerdict('#link-map', 'link-map', 'neutral', 'Waiting for a ledger comparison.')
+  $('#link-map').setAttribute('aria-label', 'No ledger comparison has run')
+  $('#negative-claim').setAttribute('hidden', '')
+}
+
 function render(): void {
   const publishedKey = wire(pointBytes(issuer.publicKey))
   const tokenKeyId = wire(keyId(issuer.publicKey))
@@ -66,42 +86,26 @@ function render(): void {
       <div class="cl-hero-main"><h1 class="cl-hero-title">Privacy Pass</h1><p class="cl-hero-sub">Anonymous tokens · VOPRF · RFC 9578</p><p class="cl-hero-desc">Blind a token request, have the issuer evaluate it under a key it must prove it used, redeem it elsewhere, then ask both services to pool their ledgers and try to match a request.</p></div>
       <aside class="cl-hero-why" aria-label="Why it matters"><span class="cl-hero-why-label">WHY IT MATTERS</span><p class="cl-hero-why-text">This is the token behind CAPTCHA-free anti-bot and rate-limit checks that need a signal without needing an identity. Remove the blinding and the wire format stays familiar, but the privacy guarantee disappears.</p></aside>
     </header>
-    <section class="intro" aria-labelledby="what-title"><p class="eyebrow">WHAT YOU ARE WATCHING</p><h2 id="what-title">A receipt with no name on it</h2><p>An issuer vouches that it evaluated one request. An origin can verify the resulting token, but a correctly blinded request gives the issuer nothing it can match to that redemption. All three roles below run locally in this browser session; no request leaves this page.</p></section>
+    <section class="intro" aria-labelledby="what-title"><p class="eyebrow">WHAT YOU ARE WATCHING</p><h2 id="what-title">A receipt with no name on it</h2><p>An issuer vouches that it evaluated one request. An origin can verify the resulting token, but under a shared issuer key, blinding prevents a direct match between the request point and the redeemed token input. All three roles below run locally in this browser session; no request leaves this page.</p></section>
     <section class="controls" aria-label="Experiment controls"><fieldset><legend>Experiment mode</legend><label><input type="radio" name="mode" value="private" checked> Private issuance</label><label><input type="radio" name="mode" value="unblinded"> <strong>BROKEN:</strong> remove blinding</label><label><input type="radio" name="mode" value="partitioned"> <strong>BROKEN:</strong> per-client published key</label><label><input type="radio" name="mode" value="substituted"> <strong>BROKEN:</strong> unpublished issuer key</label></fieldset><fieldset id="client-roster"><legend>Clients in the per-client-key fixture</legend>${CLIENT_COUNTS.map((count) => `<label><input type="radio" name="clients" value="${count}"${count === clientCount ? ' checked' : ''}${mode === 'partitioned' ? '' : ' disabled'}> ${count} clients</label>`).join('')}</fieldset><div class="command-row"><button id="issue" type="button">1. Issue token</button><button id="redeem" type="button" disabled>2. Redeem at origin</button><button id="link" type="button" disabled>3. Try to link ledgers</button><button id="replay" type="button" disabled>Replay token</button></div><p id="status" class="status neutral" data-verdict="status" data-result="neutral" role="status" aria-live="polite">Ready. Issue a token to begin.</p></section>
     <section class="flow" aria-label="Protocol flow"><article><span class="step">01</span><h2>Client blinds</h2><p id="client-detail" data-result-region="client detail">The nonce and challenge become an input point, multiplied by a fresh secret blind.</p></article><article><span class="step">02</span><h2>Issuer proves</h2><p id="issuer-detail" data-result-region="issuer detail">It sees only a blinded point and returns an evaluation with a DLEQ proof.</p></article><article><span class="step">03</span><h2>Origin redeems</h2><p id="origin-detail" data-result-region="origin detail">It privately re-evaluates the token input and records the nonce once.</p></article></section>
     <section class="ledgers" aria-label="Role ledgers"><article class="ledger"><div class="ledger-head"><p class="eyebrow">ISSUER LEDGER</p><span>What it received</span></div><div id="issuer-ledger" class="ledger-body" data-result-region="issuer ledger" role="region" tabindex="0" aria-label="Issuer ledger"><p class="empty">No issuance yet.</p></div></article><article class="ledger"><div class="ledger-head"><p class="eyebrow">ORIGIN LEDGER</p><span>What it verified</span></div><div id="origin-ledger" class="ledger-body" data-result-region="origin ledger" role="region" tabindex="0" aria-label="Origin ledger"><p class="empty">No redemption yet.</p></div></article></section>
     <div id="link-map" class="link-map neutral" data-verdict="link-map" data-result="neutral" data-result-region="ledger link map" role="img" aria-label="No ledger comparison has run"><p>Run “Try to link ledgers” to compare the values both parties hold.</p></div>
     <section class="verdicts" aria-label="Protocol verdicts" data-result-region="protocol verdicts"><div id="dleq" class="verdict neutral" data-verdict="dleq" data-result="neutral">DLEQ PROOF · waiting</div><div id="redeem-verdict" class="verdict neutral" data-verdict="redemption" data-result="neutral">REDEMPTION · waiting</div><div id="link-verdict" class="verdict neutral" data-verdict="linkage" data-result="neutral">COLLUSION CHECK · waiting</div></section>
     <p id="negative-claim" class="negative-claim" data-verdict="negative-claim" data-result="alarm" hidden>The DLEQ proof shows the issuer used the key it published to this client; it does not show it published the same key to every client. Key consistency is outside RFC 9578 and outside this page.</p>
-    <details><summary>Inspect the real wire values and scope</summary><dl data-result-region="wire values"><dt>Official known-answer tests</dt><dd id="kat-count" data-claim="kat-count" data-value="${katTotal}">${katTotal} vectors: ${__RFC9497_VECTOR_COUNT__} RFC 9497 P-384 VOPRF + ${__RFC9578_VECTOR_COUNT__} RFC 9578 type-0x0001 issuance</dd><dt>Published P-384 key</dt><dd id="pk" data-claim="published-key" data-value="${publishedKey.length}">${publishedKey.text}</dd><dt>RFC 9578 token key id</dt><dd id="key-id" data-claim="key-id" data-value="${tokenKeyId.length}">${tokenKeyId.text}</dd><dt>TokenRequest</dt><dd id="wire-request" data-claim="wire-request" data-value="">Issue a token to populate.</dd><dt>TokenResponse</dt><dd id="wire-response" data-claim="wire-response" data-value="">Issue a token to populate.</dd><dt>Token</dt><dd id="wire-token" data-claim="wire-token" data-value="">Issue a token to populate.</dd><dt>What this is not</dt><dd>No HTTP transport, attester, rate-limit model, key-consistency protocol, batched issuance, or Blind RSA implementation is included. This is not production crypto.</dd></dl></details>
-    <section class="comparison blind-rsa-panel" id="blind-rsa" aria-labelledby="blind-rsa-title"><p class="eyebrow">THE OTHER TOKEN TYPE</p><h2 id="blind-rsa-title">The Other Token Type: Blind RSA and &#8730;eNFS (2026)</h2><p>Privacy Pass has two issuance types: <strong>0x0001 VOPRF</strong>, privately verifiable and used by this lab, and <strong>0x0002 Blind RSA</strong>, publicly verifiable (<a href="https://www.rfc-editor.org/rfc/rfc9578#section-8.2.1">RFC 9578 &#167;8.2.1</a>, <a href="https://www.rfc-editor.org/rfc/rfc9578#section-8.2.2">&#167;8.2.2</a>). The paper names Blind RSA deployments including Apple Private Access Tokens, Fastly, Persona, Cloudflare, and iCloud Private Relay (<a href="https://eprint.iacr.org/2026/2131.pdf">Shea et al., IACR ePrint 2026/2131, &#167;7.2</a>).</p><div class="blind-rsa-grid"><div><h3>Why it is exposed</h3><p>A Blind RSA issuer is a raw RSA oracle on blinded values. Queries made for the attack are indistinguishable from honest issuance queries, which is exactly the phase-1 access that &#8730;eNFS needs. Lysyanskaya proved RSABSSA secure under one-more RSA, but Shea et al. argue that assumption does not capture this delayed-target RSA attack (<a href="https://www.rfc-editor.org/rfc/rfc9474#section-7">RFC 9474 &#167;7</a>; <a href="https://eprint.iacr.org/2026/2131.pdf">ePrint 2026/2131, &#167;7.2</a>).</p></div><div><h3>The paper's scale</h3><p data-cited="attack-cost"><strong>Measured 1024-bit result:</strong> 1,380 CPU core-years over five months and <strong>2<sup>32</sup></strong> oracle queries. <strong>At 2048 bits,</strong> the paper extrapolates that the attack needs about <strong>2<sup>90</sup></strong> computation and <strong>2<sup>43</sup></strong> queries: approximately <strong>2<sup>38</sup></strong> CAPTCHAs at 30 tokens each. Cloudflare's more than 2<sup>43</sup> total HTTP requests per day are an infrastructure comparison, not available Blind RSA signing queries. The paper's hypothetical scale calculation assumes Apple's one-per-minute rate limit: about 17 million years for one device, and the paper then gives 2.3 days parallelized across the 2.3 billion active Apple devices it cites. Both figures are quoted as published; note that 17 million years divided by 2.3 billion devices is nearer 2.7 days, so the 2.3 is the paper's number and not a recomputation. At Persona's per-call price, the hypothetical estimate is about $13 trillion. Key-rotation epochs range from hours to weeks (Shea et al., &#167;7.2).</p></div></div><div class="blind-rsa-grid"><div><h3>Mitigations</h3><p>Short term: rotate keys frequently. Medium term: use larger keys. Long term: add zero-knowledge proofs or move to post-quantum schemes. Where public verifiability is unnecessary, use the VOPRF type instead (Shea et al., &#167;7.2).</p></div><div><h3>Scope of this lab</h3><p>This lab does not run the attack. Its VOPRF path is not an RSA oracle, so &#8730;eNFS does not apply to it. For the adjacent RSA signing construction, see the <a href="https://systemslibrarian.github.io/crypto-lab-rsa-forge/#oracle-without-factoring">Crypto Lab RSA Forge &#8730;eNFS section</a>. Blind RSA itself remains outside this implementation.</p></div></div></section>
+    <details><summary>Inspect the real wire values and scope</summary><dl data-result-region="wire values"><dt>Official known-answer tests</dt><dd id="kat-count" data-claim="kat-count" data-value="${katTotal}">${katTotal} vectors: ${__RFC9497_VECTOR_COUNT__} RFC 9497 P-384 VOPRF + ${__RFC9578_VECTOR_COUNT__} RFC 9578 type-0x0001 issuance</dd><dt>Shared-mode P-384 key</dt><dd id="pk" data-claim="published-key" data-value="${publishedKey.length}">${publishedKey.text}</dd><dt>Shared-mode RFC 9578 token key id</dt><dd id="key-id" data-claim="key-id" data-value="${tokenKeyId.length}">${tokenKeyId.text}</dd><dt>TokenRequest</dt><dd id="wire-request" data-claim="wire-request" data-value="">Issue a token to populate.</dd><dt>TokenResponse</dt><dd id="wire-response" data-claim="wire-response" data-value="">Issue a token to populate.</dd><dt>Token</dt><dd id="wire-token" data-claim="wire-token" data-value="">Issue a token to populate.</dd><dt>What this is not</dt><dd>No HTTP transport, attester, rate-limit model, key-consistency protocol, batched issuance, or Blind RSA implementation is included. This is not production crypto.</dd></dl></details>
+    <section class="comparison blind-rsa-panel" id="blind-rsa" aria-labelledby="blind-rsa-title"><p class="eyebrow">THE OTHER TOKEN TYPE</p><h2 id="blind-rsa-title">The Other Token Type: Blind RSA and &#8730;eNFS (2026)</h2><p>RFC 9578 specifies two issuance types: <strong>0x0001 VOPRF</strong>, privately verifiable and used by this lab, and <strong>0x0002 Blind RSA</strong>, publicly verifiable (<a href="https://www.rfc-editor.org/rfc/rfc9578#section-8.2.1">RFC 9578 &#167;8.2.1</a>, <a href="https://www.rfc-editor.org/rfc/rfc9578#section-8.2.2">&#167;8.2.2</a>). The paper names Blind RSA deployments including Apple Private Access Tokens, Fastly, Persona, Cloudflare, and iCloud Private Relay (<a href="https://eprint.iacr.org/2026/2131.pdf">Shea et al., IACR ePrint 2026/2131, &#167;7.2</a>).</p><div class="blind-rsa-grid"><div><h3>Why it is exposed</h3><p>A Blind RSA issuer is a raw RSA oracle on blinded values. Queries made for the attack are indistinguishable from honest issuance queries, which is exactly the phase-1 access that &#8730;eNFS needs. Lysyanskaya proved RSABSSA secure under one-more RSA, but Shea et al. argue that assumption does not capture this delayed-target RSA attack (<a href="https://www.rfc-editor.org/rfc/rfc9474#section-7">RFC 9474 &#167;7</a>; <a href="https://eprint.iacr.org/2026/2131.pdf">ePrint 2026/2131, &#167;7.2</a>).</p></div><div><h3>The paper's scale</h3><p data-cited="attack-cost"><strong>Measured 1024-bit result:</strong> 1,380 CPU core-years over five months and <strong>2<sup>32</sup></strong> oracle queries. <strong>At 2048 bits,</strong> the paper extrapolates that the attack needs about <strong>2<sup>90</sup></strong> computation and <strong>2<sup>43</sup></strong> queries: approximately <strong>2<sup>38</sup></strong> CAPTCHAs at 30 tokens each. Cloudflare's more than 2<sup>43</sup> total HTTP requests per day are an infrastructure comparison, not available Blind RSA signing queries. The paper's hypothetical scale calculation assumes Apple's one-per-minute rate limit: about 17 million years for one device, and the paper then gives 2.3 days parallelized across the 2.3 billion active Apple devices it cites. Both figures are quoted as published; note that 17 million years divided by 2.3 billion devices is nearer 2.7 days, so the 2.3 is the paper's number and not a recomputation. At Persona's per-call price, the hypothetical estimate is about $13 trillion. Key-rotation epochs range from hours to weeks (Shea et al., &#167;7.2).</p></div></div><div class="blind-rsa-grid"><div><h3>Mitigations</h3><p>Short term: rotate keys frequently. Medium term: use larger keys. Long term: add zero-knowledge proofs or move to post-quantum schemes. Where public verifiability is unnecessary, use the VOPRF type instead (Shea et al., &#167;7.2).</p></div><div><h3>Scope of this lab</h3><p>This lab does not run the attack. Its VOPRF path is not an RSA oracle, so &#8730;eNFS does not apply to it. For the adjacent RSA signing construction, see the <a href="https://systemslibrarian.github.io/crypto-lab-rsa-forge/#oracle-without-factoring">Crypto Lab RSA Forge &#8730;eNFS section</a>. Blind RSA itself remains outside this implementation.</p></div></div></section>
     <footer class="scripture-footer"><p>So whether you eat or drink or whatever you do, do it all for the glory of God. — 1 Corinthians 10:31</p></footer>`
-  // Changing the mode and changing the fixture size retire the same things: a rendered verdict
-  // describes the run that produced it, so it may not outlive the parameters of that run.
-  const retire = (message: string): void => {
-    issuance = undefined
-    partitioned = []
-    skipped = undefined
-    redemptions = 0
-    $('#redeem').setAttribute('disabled', '')
-    $('#link').setAttribute('disabled', '')
-    $('#replay').setAttribute('disabled', '')
-    $('#issuer-ledger').innerHTML = '<p class="empty">Prior verdict retired after mode change.</p>'
-    $('#origin-ledger').innerHTML = '<p class="empty">Prior verdict retired after mode change.</p>'
-    $('#link-map').innerHTML = '<p>Prior link result retired after mode change.</p>'
-    setVerdict('#link-map', 'link-map', 'neutral')
-    $('#link-map').setAttribute('aria-label', 'Prior ledger link result retired')
-    $('#negative-claim').setAttribute('hidden', '')
-    status(message)
-  }
   document.querySelectorAll<HTMLInputElement>('input[name="mode"]').forEach((input) => input.addEventListener('change', () => {
     mode = input.value as typeof mode
     document.querySelectorAll<HTMLInputElement>('input[name="clients"]').forEach((radio) => { radio.disabled = mode !== 'partitioned' })
-    retire('Prior result retired. Issue a new token for this mode.')
+    resetRun()
+    setVerdict('#status', 'status', 'neutral', 'Prior result retired. Issue a new token for this mode.')
   }))
   document.querySelectorAll<HTMLInputElement>('input[name="clients"]').forEach((input) => input.addEventListener('change', () => {
     clientCount = Number(input.value)
-    retire(`Prior result retired. The fixture will publish a different key to each of ${clientCount} clients.`)
+    resetRun()
+    setVerdict('#status', 'status', 'neutral', `Prior result retired. The fixture will publish a different key to each of ${clientCount} clients.`)
   }))
   $('#issue').addEventListener('click', issue)
   $('#redeem').addEventListener('click', redeem)
@@ -110,7 +114,7 @@ function render(): void {
 }
 
 function issue(): void {
-  redemptions = 0
+  resetRun()
   try {
     if (mode === 'partitioned') {
       partitioned = PARTITION_ROSTER.slice(0, clientCount).map(({ client, secret }) => {
@@ -122,7 +126,7 @@ function issue(): void {
       $('#issuer-detail').textContent = 'BROKEN: the issuer partitions clients with one valid key each; no client sees the inconsistency.'
       setVerdict('#dleq', 'verdict', 'good', 'DLEQ PROOFS · ALL VERIFIED')
       $('#negative-claim').removeAttribute('hidden')
-      $('#redeem').removeAttribute('disabled'); $('#link').removeAttribute('disabled'); $('#replay').setAttribute('disabled', '')
+      $('#redeem').removeAttribute('disabled')
       status(`All ${partitioned.length} clients finalized valid tokens. The missing property is global key consistency.`)
     } else if (mode === 'substituted') {
       const rogue = new Issuer(0xfeedfacecafebeef0123456789abcdefn)
@@ -149,7 +153,7 @@ function issue(): void {
       setClaim('#wire-request', request.length, request.text)
       setClaim('#wire-response', response.length, response.text)
       setClaim('#wire-token', token.length, token.text)
-      $('#redeem').removeAttribute('disabled'); $('#link').removeAttribute('disabled'); $('#replay').removeAttribute('disabled')
+      $('#redeem').removeAttribute('disabled')
       status(mode === 'unblinded' ? 'BROKEN mode issued: the request is directly linkable.' : 'Token finalized after the real DLEQ proof verified.')
     }
   } catch (error) {
@@ -169,7 +173,7 @@ function issue(): void {
       ? 'BROKEN: the evaluation carries a valid proof, but under an unpublished key.'
       : 'The issuance path stopped before a token was finalized.'
     if (designedRejection && skipped) {
-      $('#origin-ledger').innerHTML = `<p><b>A client that skipped the proof check</b> · finalized a token anyway</p><code>token key id: ${short(skipped.issuance.token.tokenKeyId)}</code><p>${skipped.verdict.reason}</p>`
+      $('#origin-ledger').innerHTML = `<p><b>A client that checked the proof against the responding key instead of its trusted key</b> · finalized a token anyway</p><code>token key id: ${short(skipped.issuance.token.tokenKeyId)}</code><p>${skipped.verdict.reason}</p>`
       $('#origin-detail').textContent = skipped.verdict.reason
       setVerdict('#redeem-verdict', 'verdict', skipped.verdict.ok ? 'alarm' : 'good', `SKIPPED-CHECK TOKEN · ${skipped.verdict.ok ? 'ACCEPTED' : 'REFUSED'}`)
     }
@@ -183,12 +187,20 @@ function issue(): void {
 }
 function redeem(): void {
   if (partitioned.length) {
+    const firstPresentation = redemptions === 0
     const results = partitioned.map((entry) => ({ ...entry, result: entry.origin.redeem(serializeToken(entry.issuance.token), challenge, entry.issuer) }))
     $('#origin-ledger').innerHTML = results.map(({ client, issuance: clientIssuance, result }) => `<p><b>${client}</b> · ${result.ok ? 'verified' : 'refused'}</p><code>token key id: ${short(clientIssuance.token.tokenKeyId)}</code>`).join('')
     const allVerified = results.every(({ result }) => result.ok)
-    setVerdict('#redeem-verdict', 'verdict', allVerified ? 'good' : 'alarm', `REDEMPTIONS · ${allVerified ? 'ALL VERIFIED' : 'REFUSED'}`)
-    $('#origin-detail').textContent = 'Every authenticator verifies and every fresh nonce is accepted.'
-    status(allVerified ? `All ${results.length} tokens redeemed successfully under their respective issuer keys.` : 'A partition fixture redemption failed.', allVerified)
+    const allRefused = results.every(({ result }) => !result.ok)
+    const intact = firstPresentation ? allVerified : allRefused && results.every(({ result }) => result.reason.startsWith('Replay refused'))
+    const outcome = allVerified ? 'ALL VERIFIED' : allRefused ? 'ALL REFUSED' : 'MIXED'
+    redemptions += 1
+    $('#link').removeAttribute('disabled')
+    setVerdict('#redeem-verdict', 'verdict', intact ? 'good' : 'alarm', `REDEMPTIONS · ${outcome}`)
+    $('#origin-detail').textContent = [...new Set(results.map(({ result }) => result.reason))].join(' / ')
+    status(intact
+      ? firstPresentation ? `All ${results.length} tokens redeemed successfully under their respective issuer keys.` : 'The origin refused each previously spent token.'
+      : 'INTEGRITY ALARM: a presentation produced an unexpected result.', intact)
     return
   }
   if (!issuance) return
@@ -198,13 +210,16 @@ function redeem(): void {
   const expectedOk = redemptions === 0
   const result = origin.redeem(serializeToken(issuance.token), challenge, issuer)
   redemptions += 1
-  const intact = result.ok === expectedOk
+  $('#link').removeAttribute('disabled')
+  $('#replay').removeAttribute('disabled')
+  const intact = expectedOk ? result.ok : !result.ok && result.reason.startsWith('Replay refused')
   $('#origin-ledger').innerHTML = `<p><b>${result.ok ? 'Token redeemed' : 'Token refused'}</b></p><code>nonce: ${short(issuance.token.nonce)}</code><code>authenticator: ${short(issuance.token.authenticator)}</code><p>${result.reason}</p>`
   $('#origin-detail').textContent = result.reason
   setVerdict('#redeem-verdict', 'verdict', intact ? 'good' : 'alarm', `REDEMPTION · ${result.ok ? 'VERIFIED' : 'REFUSED'}`)
   status(intact ? result.reason : `INTEGRITY ALARM: the origin ${result.ok ? 'accepted' : 'refused'} a presentation it should have ${expectedOk ? 'accepted' : 'refused'}. ${result.reason}`, intact)
 }
 function link(): void {
+  if (redemptions === 0) return
   if (partitioned.length) {
     const buckets = new Set(partitioned.map(({ issuance: clientIssuance }) => hex(clientIssuance.token.tokenKeyId)))
     const linked = buckets.size === partitioned.length
@@ -223,9 +238,9 @@ function link(): void {
   $('#link-map').innerHTML = linkDiagram(linked ? 1 : 0, linked ? ['raw input point matches'] : [])
   setVerdict('#link-map', 'link-map', linked ? 'alarm' : 'good')
   $('#link-map').setAttribute('aria-label', linked ? 'One alarm line links the raw request point to redemption' : 'No ledger links found')
-  status(linked ? 'ALARM: issuer hash-to-group value equals the origin-computable input point.' : 'Issuer and origin have no shared equality-testable value.', !linked)
+  status(linked ? 'ALARM: issuer hash-to-group value equals the origin-computable input point.' : 'The request point differs from the point computed at redemption. Timing, network metadata and other ways to identify a client are outside this comparison.', !linked)
 }
-function replay(): void { if (issuance) redeem() }
+function replay(): void { if (issuance && redemptions > 0) redeem() }
 
 function linkDiagram(count: number, labels: string[]): string {
   const lines = Array.from({ length: count }, (_, index) => {
@@ -235,7 +250,7 @@ function linkDiagram(count: number, labels: string[]): string {
   // The count is rendered as its own measurement, including when it is zero: "no line was drawn"
   // is a result, and an unmarked number would be outside every coverage rule this suite applies.
   const caption = count === 0
-    ? 'no equality-testable values cross the ledgers'
+    ? 'no matching token input point'
     : labels.join(' · ')
   const svg = count === 0 ? '' : `<svg viewBox="0 0 200 100" aria-hidden="true" focusable="false">${lines}</svg>`
   return `${svg}<p class="${count === 0 ? 'no-match' : 'link-labels'}" data-claim="computed-links" data-value="${count}">${count} computed link${count === 1 ? '' : 's'} · ${caption}</p>`
